@@ -7,6 +7,7 @@ from PIL import Image
 from tqdm import tqdm
 
 from brainio_base.stimuli import StimulusSet
+from brainio_base.assemblies import merge_data_arrays
 from brainscore.benchmarks import BenchmarkBase, ceil_score
 from brainscore.benchmarks.loaders import average_repetition
 from brainscore.metrics import Score
@@ -195,6 +196,42 @@ class LayerScores:
         layer_scores = Score.merge(*layer_scores)
         layer_scores = layer_scores.sel(layer=layers)  # preserve layer ordering
         return layer_scores
+
+class TemporalModelCommitment(BrainModel):
+    def __init__(self, *args, **kwargs):
+        self.static_model_commitment = ModelCommitment(*args, **kwargs)
+        self.start_task = self.static_model_commitment.start_task
+        self.commit_region = self.static_model_commitment.commit_region
+        self.time_bins = None
+        self._temporal_maps = {}
+
+    def make_temporal(self, assembly):
+        layer_regions = {self.region_layer_map[region]: region for region in self.recorded_regions}
+        assert len(layer_regions) == len(self.recorded_regions), f"duplicate layers for {self.recorded_regions}"
+        stimulus_set = assembly.stimulus_set
+        activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()))
+        # for each time bin, stimulus regress activations:
+        for start, end in assembly.time_bin.values:
+            time_bin = (start, end)
+            self._temporal_maps[time_bin]=(pls_regression().fit(activations, assembly.sel(time_start=start, time_end=end)))
+
+    def look_at(self, stimuli):
+        temporal_assembly = []
+        activations = self.static_model_commitment.look_at(stimuli)
+        for time_bin, regressor in self._temporal_maps.items():
+            temporal_assembly.append(regressor.predict(activations))
+        temporal_assembly = merge_data_arrays(temporal_assembly)
+        return temporal_assembly
+
+    def start_recording(self, recording_target, time_bins=None):
+        self.time_bins = time_bins
+        self.static_model_commitment.start_recording(recording_target)
+        if time_bins is not None:
+            assert len(time_bins) == len(self._temporal_maps)
+            assert set(time_bins) == set(list(self._temporal_maps.keys()))
+
+    def receptive_fields(self, record=True):
+        pass
 
 
 def single_element(element_list):
