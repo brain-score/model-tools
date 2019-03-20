@@ -253,7 +253,7 @@ class TemporalModelCommitment(BrainModel):
 			assert assembly is not None
 		if is_empty(self._temporal_maps) and time_bins is not None:
 			assert set(time_bins).issuperset(set(assembly.time_bin.values))
-		else if time_bins is not None:
+		elif time_bins is not None:
 			assert set(time_bins).issuperset(set(self._temporal_maps[recording_target].keys()))
 			# assert len(time_bins) == len(self._temporal_maps[recording_target].keys())
 			# assert set(time_bins) == set(self._temporal_maps[recording_target].keys())
