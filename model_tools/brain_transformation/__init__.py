@@ -246,11 +246,15 @@ class TemporalModelCommitment(BrainModel):
 		ds=ds.set_index(time_bin=['time_bin_start', 'time_bin_end'])
 		return assembly.combine_first(ds)
 
-	def start_recording(self, recording_target, time_bins=None):
+	def start_recording(self, recording_target, assembly=None, time_bins=None):
 		self.time_bins = time_bins
 		self.static_model_commitment.start_recording(recording_target)
-		if time_bins is not None:
-			assert set(time_bins).issuperset(set(self._temporal_maps[recording_target].keys())) 
+		if is_empty(self._temporal_maps):
+			assert assembly not None
+		if is_empty(self._temporal_maps) and time_bins is not None:
+			assert set(time_bins).issuperset(set(assembly.time_bin.values))
+		else if time_bins is not None:
+			assert set(time_bins).issuperset(set(self._temporal_maps[recording_target].keys()))
 			# assert len(time_bins) == len(self._temporal_maps[recording_target].keys())
 			# assert set(time_bins) == set(self._temporal_maps[recording_target].keys())
 
