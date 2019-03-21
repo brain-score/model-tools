@@ -211,7 +211,7 @@ class TemporalModelCommitment(ModelCommitment):
 		temporal_mapped_regions = set(assembly['region'].values)
 		assert bool(set(self.region_layer_map.keys()).intersection(temporal_mapped_regions))		# force simalr brain regions
 		temporal_mapped_regions = list(set(self.region_layer_map.keys()).intersection(self.region_layer_map.keys()))
-		layer_regions = {self.region_layer_map[region]: region for region in self._temporal_mapped_regions}
+		layer_regions = {self.region_layer_map[region]: region for region in temporal_mapped_regions}
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 		activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()))
 		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
