@@ -17,8 +17,6 @@ from brainscore.model_interface import BrainModel
 from brainscore.utils import fullname
 from result_caching import store_xarray, store
 
-from brainio_base.assemblies import NeuronRecordingAssembly
-
 
 class ModelCommitment(BrainModel):
 	def __init__(self, identifier, base_model, layers):
@@ -200,10 +198,11 @@ class LayerScores:
 		return layer_scores
 
 class TemporalModelCommitment(BrainModel):
-	def __init__(self, identifier, base_model, layers):
+	def __init__(self, identifier, base_model, layers, region_layer_map: Optional[dict] = None):
 		self.static_model_commitment = ModelCommitment(identifier, base_model, layers)
 		self.start_task = self.static_model_commitment.start_task
 		self.commit_region = self.static_model_commitment.commit_region
+		self.region_layer_map = region_layer_map or {}
 		self.time_bins = None
 		self._temporal_maps = {}
 
@@ -218,9 +217,10 @@ class TemporalModelCommitment(BrainModel):
 		# for each time bin, stimulus regress activations:
 		for region in self.recorded_regions:
 			time_bin_regressor = {}
+			region_activations = activations.sel(region=region)
 			for time_bin in assembly.time_bin.values:
 				target_assembly = assembly.sel(time_bin=time_bin,region=region)
-				time_bin_regressor[time_bin] = pls_regression().fit(activations.sel(region=region), target_assembly)
+				time_bin_regressor[time_bin] = pls_regression().fit(region_activations, target_assembly)
 			self._temporal_maps[region]=time_bin_regressor
 
 	def look_at(self, stimuli):
@@ -228,9 +228,10 @@ class TemporalModelCommitment(BrainModel):
 		activations = self.static_model_commitment.look_at(stimuli)
 		for region in self.recorded_regions:
 			temporal_regressors = self._temporal_maps[region]
+			region_activations = activations.sel(region=region)
 			for time_bin in self.time_bins:
 				regressor = temporal_regressors[time_bin]
-				regressed_act = regressor.predict(activations.sel(region=region))
+				regressed_act = regressor.predict(region_activations)
 				regressed_act = _package_temporal(time_bin, regressed_act)
 				temporal_assembly.append(regressed_act)
 		temporal_assembly = merge_data_arrays(temporal_assembly)
@@ -247,8 +248,9 @@ class TemporalModelCommitment(BrainModel):
 		return assembly
 
 	def start_recording(self, recording_target, time_bins=None):
-		assert not is_empty(self._temporal_maps)
-		assert not is_empty(self.region_layer_map)
+		assert self._temporal_maps
+		assert self.region_layer_map
+		assert recording_target in self._temporal_maps.keys()
 		self.static_model_commitment.start_recording(recording_target)
 		if time_bins is not None:
 			assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
