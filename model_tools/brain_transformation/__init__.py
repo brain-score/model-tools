@@ -208,14 +208,19 @@ class TemporalModelCommitment(ModelCommitment):
 	def make_temporal(self, assembly):
 		assert self.region_layer_map																	# force commit_region to come before
 		assert len(set(assembly.time_bin.values)) > 1													# force temporal recordings/assembly
+		
 		temporal_mapped_regions = set(assembly['region'].values)
-		assert bool(set(self.region_layer_map.keys()).intersection(temporal_mapped_regions))		# force simalr brain regions
+		assert bool(set(self.region_layer_map.keys()).intersection(temporal_mapped_regions))			# force simalr brain regions
+		
 		temporal_mapped_regions = list(set(self.region_layer_map.keys()).intersection(self.region_layer_map.keys()))
 		layer_regions = {self.region_layer_map[region]: region for region in temporal_mapped_regions}
+		
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
+
 		activations = self.layer_model.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier='temporal_map_stim')
 		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
-		activations.to_netcdf('temporal_region_activations.nc')
+		testing = [activations.coords]
+
 		for region in temporal_mapped_regions:
 			time_bin_regressor = {}
 			region_activations = activations.sel(region=region)
