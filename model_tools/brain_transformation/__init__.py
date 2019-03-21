@@ -221,6 +221,7 @@ class TemporalModelCommitment(ModelCommitment):
 		# activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
 		coords = { 'region' : ( ('neuroid'), [layer_regions[layer] for layer in activations['layer'].values]) }
 		activations = activations.assign_coords(**coords)
+		activations = activations.set_index({'neuroid':'region'}, append=True)
 		# testing = [activations.coords]
 
 		for region in temporal_mapped_regions:
