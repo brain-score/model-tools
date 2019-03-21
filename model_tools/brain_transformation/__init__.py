@@ -201,7 +201,7 @@ class TemporalModelCommitment(ModelCommitment):
 	def __init__(self, identifier, base_model, layers):
 		super(TemporalModelCommitment, self).__init__(identifier, base_model, layers)
 		self.region_layer_map = self.layer_model.region_layer_map
-		self.recorded_regions = []
+		self.recorded_regions = self.layer_model.recorded_regions
 		self.time_bins = None
 		self._temporal_maps = {}
 
@@ -264,7 +264,7 @@ class TemporalModelCommitment(ModelCommitment):
 			assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
 		else:
 			time_bins = self._temporal_maps[recording_target].keys()
-		self.recorded_regions = [recording_target]
+		self.layer_model.start_recording(recording_target)
 		self.time_bins = time_bins
 
 	def start_recording(self, recording_target):
@@ -273,7 +273,7 @@ class TemporalModelCommitment(ModelCommitment):
 		assert recording_target in self._temporal_maps.keys()
 		if self.time_bins is None:
 			self.time_bins = self._temporal_maps[recording_target].keys()
-		self.recorded_regions = [recording_target]
+		self.layer_model.start_recording(recording_target)
 
 	def receptive_fields(self, record=True):
 		pass
