@@ -213,7 +213,7 @@ class TemporalModelCommitment(ModelCommitment):
 		temporal_mapped_regions = list(set(self.region_layer_map.keys()).intersection(self.region_layer_map.keys()))
 		layer_regions = {self.region_layer_map[region]: region for region in temporal_mapped_regions}
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
-		activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()))
+		activations = self.layer_model.base_model(stimulus_set, layers=list(layer_regions.keys()))
 		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
 		for region in self.recorded_regions:
 			time_bin_regressor = {}
