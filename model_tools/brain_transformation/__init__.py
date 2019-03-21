@@ -211,14 +211,14 @@ class TemporalModelCommitment(BrainModel):
 		layer_regions = {self.region_layer_map[region]: region for region in self.recorded_regions}
 		assert len(layer_regions) == len(self.recorded_regions), f"duplicate layers for {self.recorded_regions}"
 		assert set(assembly.region.values).issuperset(set(layer_regions))
+		assert len(assembly.time_bin.values) > 1
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 		activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()))
 		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
 		# for each time bin, stimulus regress activations:
 		for region in self.recorded_regions:
 			time_bin_regressor = {}
-			for start, end in assembly.time_bin.values:
-				time_bin = (start, end)
+			for time_bin in assembly.time_bin.values:
 				target_assembly = assembly.sel(time_bin=time_bin,region=region)
 				time_bin_regressor[time_bin] = pls_regression().fit(activations.sel(region=region), target_assembly)
 			self._temporal_maps[region]=time_bin_regressor
@@ -228,7 +228,8 @@ class TemporalModelCommitment(BrainModel):
 		activations = self.static_model_commitment.look_at(stimuli)
 		for region in self.recorded_regions:
 			temporal_regressors = self._temporal_maps[region]
-			for time_bin, regressor in self.temporal_regressors.items():
+			for time_bin in self.time_bins:
+				regressor = temporal_regressors[time_bin]
 				regressed_act = regressor.predict(activations.sel(region=region))
 				regressed_act = _package_temporal(time_bin, regressed_act)
 				temporal_assembly.append(regressed_act)
@@ -236,27 +237,24 @@ class TemporalModelCommitment(BrainModel):
 		return temporal_assembly
 
 	def _package_temporal(self, time_bin, assembly):
-		ds = NeuronRecordingAssembly(time_bin)
-		ds=ds.expand_dims('time_bin')
+		assembly=assembly.expand_dims('time_bin', axis=-1)
 		coords = {
 					'time_bin_start': (('time_bin'), [t_bin[0]])
 				  , 'time_bin_end': (('time_bin'), [t_bin[1]])
 				 }
-		ds=ds.assign_coords(**coords)
-		ds=ds.set_index(time_bin=['time_bin_start', 'time_bin_end'])
-		return assembly.combine_first(ds)
+		assembly=assembly.assign_coords(**coords)
+		assembly=assembly.set_index(time_bin=['time_bin_start', 'time_bin_end'])
+		return assembly
 
-	def start_recording(self, recording_target, assembly=None, time_bins=None):
-		self.time_bins = time_bins
+	def start_recording(self, recording_target, time_bins=None):
+		assert not is_empty(self._temporal_maps)
+		assert not is_empty(self.region_layer_map)
 		self.static_model_commitment.start_recording(recording_target)
-		if is_empty(self._temporal_maps):
-			assert assembly is not None
-		if is_empty(self._temporal_maps) and time_bins is not None:
-			assert set(time_bins).issuperset(set(assembly.time_bin.values))
-		elif time_bins is not None:
-			assert set(time_bins).issuperset(set(self._temporal_maps[recording_target].keys()))
-			# assert len(time_bins) == len(self._temporal_maps[recording_target].keys())
-			# assert set(time_bins) == set(self._temporal_maps[recording_target].keys())
+		if time_bins is not None:
+			assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
+		else:
+			time_bins = set(self._temporal_maps[recording_target].keys())
+		self.time_bins = time_bins
 
 	def receptive_fields(self, record=True):
 		pass
