@@ -238,7 +238,6 @@ class TemporalModelCommitment(BrainModel):
 		layer_regions = {self.region_layer_map[region]: region for region in self.recorded_regions}
 		assert len(layer_regions) == len(self.recorded_regions), f"duplicate layers for {self.recorded_regions}"
 		activations = self.base_model(stimuli, layers=list(layer_regions.keys()))
-		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
 
 		activations = self._set_region_coords(activations,layer_regions)
 		temporal_assembly = []
