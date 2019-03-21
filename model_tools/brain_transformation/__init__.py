@@ -197,13 +197,11 @@ class LayerScores:
 		layer_scores = layer_scores.sel(layer=layers)  # preserve layer ordering
 		return layer_scores
 
-class TemporalModelCommitment(BrainModel):
+class TemporalModelCommitment(ModelCommitment):
 	def __init__(self, identifier, base_model, layers):
-		self.static_model_commitment = ModelCommitment(identifier, base_model, layers)
-		self.start_task = self.static_model_commitment.start_task
-		self.commit_region = self.static_model_commitment.commit_region
-		self.region_layer_map = self.static_model_commitment.layer_model.region_layer_map
-		self.recorded_regions = self.static_model_commitment.layer_model.recorded_regions
+		super(TemporalModelCommitment, self).__init__(identifier, base_model, layers)
+		self.region_layer_map = self.layer_model.region_layer_map
+		self.recorded_regions = self.layer_model.recorded_regions
 		self.time_bins = None
 		self._temporal_maps = {}
 
@@ -227,7 +225,7 @@ class TemporalModelCommitment(BrainModel):
 
 	def look_at(self, stimuli):
 		temporal_assembly = []
-		activations = self.static_model_commitment.look_at(stimuli)
+		activations = self.layer_model.look_at(stimuli)
 		for region in self.recorded_regions:
 			temporal_regressors = self._temporal_maps[region]
 			region_activations = activations.sel(region=region)
@@ -253,7 +251,7 @@ class TemporalModelCommitment(BrainModel):
 		assert self._temporal_maps
 		assert self.region_layer_map
 		assert recording_target in self._temporal_maps.keys()
-		self.static_model_commitment.start_recording(recording_target)
+		self.layer_model.start_recording(recording_target)
 		if time_bins is not None:
 			assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
 		else:
