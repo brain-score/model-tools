@@ -293,7 +293,7 @@ class TemporalModelCommitment(BrainModel):
 		layer_selection = LayerSelection(model_identifier=self.identifier,
 										 activations_model=self.base_model, layers=self.layers)
 		best_layer = layer_selection(assembly)
-		self.region_layer_map[region] = layer
+		self.region_layer_map[region] = best_layer
 
 	def receptive_fields(self, record=True):
 		pass
