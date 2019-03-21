@@ -202,8 +202,8 @@ class TemporalModelCommitment(BrainModel):
 		self.static_model_commitment = ModelCommitment(identifier, base_model, layers)
 		self.start_task = self.static_model_commitment.start_task
 		self.commit_region = self.static_model_commitment.commit_region
-		self.region_layer_map = self.layer_model.region_layer_map
-		self.recorded_regions = self.layer_model.recorded_regions
+		self.region_layer_map = self.static_model_commitment.layer_model.region_layer_map
+		self.recorded_regions = self.static_model_commitment.layer_model.recorded_regions
 		self.time_bins = None
 		self._temporal_maps = {}
 
