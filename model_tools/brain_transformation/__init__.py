@@ -198,22 +198,21 @@ class LayerScores:
 		return layer_scores
 
 class TemporalModelCommitment(BrainModel):
-	def __init__(self, identifier, base_model, layers, region_layer_map: Optional[dict] = None):
+	def __init__(self, identifier, base_model, layers):
 		self.static_model_commitment = ModelCommitment(identifier, base_model, layers)
 		self.start_task = self.static_model_commitment.start_task
 		self.commit_region = self.static_model_commitment.commit_region
-		self.region_layer_map = region_layer_map or {}
+		self.region_layer_map = self.layer_model.region_layer_map
+		self.recorded_regions = self.layer_model.recorded_regions
 		self.time_bins = None
 		self._temporal_maps = {}
-		self._temporal_mapped_regions = []
-		self.recorded_regions = []
 
 	def make_temporal(self, assembly):
 		assert self.region_layer_map																	# force commit_region to come before
-		assert len(assembly.time_bin.values) > 1														# force temporal recordings/assembly
-		self._temporal_mapped_regions = set(assembly['region'].values)
-		assert bool(set(self.region_layer_map.keys()).intersection(self._temporal_mapped_regions))		# force simalr brain regions
-		self._temporal_mapped_regions = list(set(self.region_layer_map.keys()).intersection(self.region_layer_map.keys()))
+		assert len(set(assembly.time_bin.values)) > 1													# force temporal recordings/assembly
+		temporal_mapped_regions = set(assembly['region'].values)
+		assert bool(set(self.region_layer_map.keys()).intersection(temporal_mapped_regions))		# force simalr brain regions
+		temporal_mapped_regions = list(set(self.region_layer_map.keys()).intersection(self.region_layer_map.keys()))
 		layer_regions = {self.region_layer_map[region]: region for region in self._temporal_mapped_regions}
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 		activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()))
