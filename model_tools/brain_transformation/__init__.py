@@ -201,7 +201,7 @@ class TemporalModelCommitment(ModelCommitment):
 	def __init__(self, identifier, base_model, layers):
 		super(TemporalModelCommitment, self).__init__(identifier, base_model, layers)
 		self.region_layer_map = self.layer_model.region_layer_map
-		self.recorded_regions = self.layer_model.recorded_regions
+		self.recorded_regions = []
 		self.time_bins = None
 		self._temporal_maps = {}
 
@@ -215,7 +215,7 @@ class TemporalModelCommitment(ModelCommitment):
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 		activations = self.layer_model.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier='temporal_map_stim')
 		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
-		for region in self.recorded_regions:
+		for region in temporal_mapped_regions:
 			time_bin_regressor = {}
 			region_activations = activations.sel(region=region)
 			for time_bin in assembly.time_bin.values:
@@ -247,16 +247,24 @@ class TemporalModelCommitment(ModelCommitment):
 		assembly=assembly.set_index(time_bin=['time_bin_start', 'time_bin_end'])
 		return assembly
 
-	def start_recording(self, recording_target, time_bins=None):
+	def start_temporal_recording(self, recording_target, time_bins):
 		assert self._temporal_maps
 		assert self.region_layer_map
 		assert recording_target in self._temporal_maps.keys()
-		self.layer_model.start_recording(recording_target)
 		if time_bins is not None:
 			assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
 		else:
 			time_bins = self._temporal_maps[recording_target].keys()
+		self.recorded_regions = [recording_target]
 		self.time_bins = time_bins
+
+	def start_recording(self, recording_target):
+		assert self._temporal_maps
+		assert self.region_layer_map
+		assert recording_target in self._temporal_maps.keys()
+		if self.time_bins is None:
+			self.time_bins = self._temporal_maps[recording_target].keys()
+		self.recorded_regions = [recording_target]
 
 	def receptive_fields(self, record=True):
 		pass
