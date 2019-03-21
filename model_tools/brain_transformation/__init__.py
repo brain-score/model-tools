@@ -197,13 +197,17 @@ class LayerScores:
 		layer_scores = layer_scores.sel(layer=layers)  # preserve layer ordering
 		return layer_scores
 
-class TemporalModelCommitment(ModelCommitment):
-	def __init__(self, identifier, base_model, layers):
-		super(TemporalModelCommitment, self).__init__(identifier, base_model, layers)
-		self.region_layer_map = self.layer_model.region_layer_map
-		self.recorded_regions = self.layer_model.recorded_regions
+class TemporalModelCommitment(BrainModel):
+	def __init__(self, identifier, base_model, layer, region_layer_map: Optional[dict] = None):
+		self.layer = layer
+		self.identifier = identifier
+		self.base_model = base_model
+		self.region_layer_map = region_layer_map or {}
+		self.recorded_regions = []
+
 		self.time_bins = None
 		self._temporal_maps = {}
+		self._layer_regions = None
 
 	def make_temporal(self, assembly):
 		assert self.region_layer_map																	# force commit_region to come before
@@ -217,12 +221,10 @@ class TemporalModelCommitment(ModelCommitment):
 		
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 
-		activations = self.layer_model.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier='temporal_map_stim')
-		# activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
-		coords = { 'region' : ( ('neuroid'), [layer_regions[layer] for layer in activations['layer'].values]) }
-		activations = activations.assign_coords(**coords)
-		activations = activations.set_index({'neuroid':'region'}, append=True)
-		# testing = [activations.coords]
+		stimuli_identifier = self.identifier + 'temporal_map_stim'
+
+		activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier=stimuli_identifier)
+		activations = self._set_region_coords(activations, layer_regions)
 
 		for region in temporal_mapped_regions:
 			time_bin_regressor = {}
@@ -233,8 +235,13 @@ class TemporalModelCommitment(ModelCommitment):
 			self._temporal_maps[region]=time_bin_regressor
 
 	def look_at(self, stimuli):
+		layer_regions = {self.region_layer_map[region]: region for region in self.recorded_regions}
+		assert len(layer_regions) == len(self.recorded_regions), f"duplicate layers for {self.recorded_regions}"
+		activations = self.base_model(stimuli, layers=list(layer_regions.keys()))
+		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
+
+		activations = self._set_region_coords(activations,layer_regions)
 		temporal_assembly = []
-		activations = self.layer_model.look_at(stimuli)
 		for region in self.recorded_regions:
 			temporal_regressors = self._temporal_maps[region]
 			region_activations = activations.sel(region=region)
@@ -245,6 +252,12 @@ class TemporalModelCommitment(ModelCommitment):
 				temporal_assembly.append(regressed_act)
 		temporal_assembly = merge_data_arrays(temporal_assembly)
 		return temporal_assembly
+
+	def _set_region_coords(self, activations, layer_regions):
+		coords = { 'region' : ( ('neuroid'), [layer_regions[layer] for layer in activations['layer'].values]) }
+		activations = activations.assign_coords(**coords)
+		activations = activations.set_index({'neuroid':'region'}, append=True)
+		return activations
 
 	def _package_temporal(self, time_bin, assembly):
 		assembly=assembly.expand_dims('time_bin', axis=-1)
@@ -264,7 +277,8 @@ class TemporalModelCommitment(ModelCommitment):
 			assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
 		else:
 			time_bins = self._temporal_maps[recording_target].keys()
-		self.layer_model.start_recording(recording_target)
+		# self.layer_model.start_recording(recording_target)
+		self.recorded_regions = [recording_target]
 		self.time_bins = time_bins
 
 	def start_recording(self, recording_target):
@@ -273,7 +287,13 @@ class TemporalModelCommitment(ModelCommitment):
 		assert recording_target in self._temporal_maps.keys()
 		if self.time_bins is None:
 			self.time_bins = self._temporal_maps[recording_target].keys()
-		self.layer_model.start_recording(recording_target)
+		self.recorded_regions = [recording_target]
+
+	def commit_region(self, region, assembly):
+		layer_selection = LayerSelection(model_identifier=self.identifier,
+										 activations_model=self.base_model, layers=self.layers)
+		best_layer = layer_selection(assembly)
+		self.region_layer_map[region] = layer
 
 	def receptive_fields(self, record=True):
 		pass
