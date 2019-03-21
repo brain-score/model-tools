@@ -263,8 +263,8 @@ class TemporalModelCommitment(BrainModel):
 	def _package_temporal(self, time_bin, assembly):
 		assembly=assembly.expand_dims('time_bin', axis=-1)
 		coords = {
-					'time_bin_start': (('time_bin'), [t_bin[0]])
-				  , 'time_bin_end': (('time_bin'), [t_bin[1]])
+					'time_bin_start': (('time_bin'), [time_bin[0]])
+				  , 'time_bin_end': (('time_bin'), [time_bin[1]])
 				 }
 		assembly=assembly.assign_coords(**coords)
 		assembly=assembly.set_index(time_bin=['time_bin_start', 'time_bin_end'])
