@@ -198,7 +198,7 @@ class LayerScores:
 		return layer_scores
 
 class TemporalModelCommitment(BrainModel):
-	def __init__(self, identifier, base_model, layer, region_layer_map: Optional[dict] = None):
+	def __init__(self, identifier, base_model, layers, region_layer_map: Optional[dict] = None):
 		self.layers = layers
 		self.identifier = identifier
 		self.base_model = base_model
