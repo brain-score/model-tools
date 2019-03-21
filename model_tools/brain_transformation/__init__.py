@@ -205,16 +205,19 @@ class TemporalModelCommitment(BrainModel):
 		self.region_layer_map = region_layer_map or {}
 		self.time_bins = None
 		self._temporal_maps = {}
+		self._temporal_mapped_regions = []
+		self.recorded_regions = []
 
 	def make_temporal(self, assembly):
-		layer_regions = {self.region_layer_map[region]: region for region in self.recorded_regions}
-		assert len(layer_regions) == len(self.recorded_regions), f"duplicate layers for {self.recorded_regions}"
-		assert set(assembly.region.values).issuperset(set(layer_regions))
-		assert len(assembly.time_bin.values) > 1
+		assert self.region_layer_map																	# force commit_region to come before
+		assert len(assembly.time_bin.values) > 1														# force temporal recordings/assembly
+		self._temporal_mapped_regions = set(assembly['region'].values)
+		assert bool(set(self.region_layer_map.keys()).intersection(self._temporal_mapped_regions))		# force simalr brain regions
+		self._temporal_mapped_regions = list(set(self.region_layer_map.keys()).intersection(self.region_layer_map.keys()))
+		layer_regions = {self.region_layer_map[region]: region for region in self._temporal_mapped_regions}
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 		activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()))
 		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
-		# for each time bin, stimulus regress activations:
 		for region in self.recorded_regions:
 			time_bin_regressor = {}
 			region_activations = activations.sel(region=region)
@@ -255,7 +258,7 @@ class TemporalModelCommitment(BrainModel):
 		if time_bins is not None:
 			assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
 		else:
-			time_bins = set(self._temporal_maps[recording_target].keys())
+			time_bins = self._temporal_maps[recording_target].keys()
 		self.time_bins = time_bins
 
 	def receptive_fields(self, record=True):
