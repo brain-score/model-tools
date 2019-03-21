@@ -218,8 +218,10 @@ class TemporalModelCommitment(ModelCommitment):
 		stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 
 		activations = self.layer_model.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier='temporal_map_stim')
-		activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
-		testing = [activations.coords]
+		# activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
+		coords = { 'region' : ( ('neuroid'), [layer_regions[layer] for layer in activations['layer'].values]) }
+		activations = activations.assign_coords(**coords)
+		# testing = [activations.coords]
 
 		for region in temporal_mapped_regions:
 			time_bin_regressor = {}
