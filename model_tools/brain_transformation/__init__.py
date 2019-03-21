@@ -231,7 +231,9 @@ class TemporalModelCommitment(BrainModel):
 			region_activations = activations.sel(region=region)
 			for time_bin in assembly.time_bin.values:
 				target_assembly = assembly.sel(time_bin=time_bin,region=region)
-				time_bin_regressor[time_bin] = pls_regression().fit(region_activations, target_assembly)
+				regressor = pls_regression()
+				regressor.fit(region_activations, target_assembly)
+				time_bin_regressor[time_bin] = regressor
 			self._temporal_maps[region]=time_bin_regressor
 
 	def look_at(self, stimuli):
