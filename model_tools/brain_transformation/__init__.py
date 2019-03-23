@@ -15,7 +15,7 @@ from brainscore.metrics.ceiling import InternalConsistency
 from brainscore.metrics.regression import CrossRegressedCorrelation, pls_regression
 from brainscore.model_interface import BrainModel
 from brainscore.utils import fullname
-from result_caching import store_xarray, store
+from result_caching import store_xarray, store, store_dict
 
 
 class ModelCommitment(BrainModel):
@@ -225,23 +225,40 @@ class TemporalModelCommitment(BrainModel):
 
 		activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier=stimuli_identifier)
 		activations = self._set_region_coords(activations, layer_regions)
-
-		for region in temporal_mapped_regions:
-			time_bin_regressor = {}
-			region_activations = activations.sel(region=region)
-			for time_bin in assembly.time_bin.values:
-				target_assembly = assembly.sel(time_bin=time_bin,region=region)
-				regressor = pls_regression()
-				regressor.fit(region_activations, target_assembly)
-				time_bin_regressor[time_bin] = regressor
-			self._temporal_maps[region]=time_bin_regressor
-
+		# TODO: add result caching (@store_dict(temporal_mapped, assmebly))
+		self._temporal_maps = self._set_temporal_maps(self.identifier, temporal_mapped_regions, activations, assembly)
+		# for region in temporal_mapped_regions:
+		# 	time_bin_regressor = {}
+		# 	region_activations = activations.sel(region=region)
+		# 	for time_bin in assembly.time_bin.values:
+		# 		target_assembly = assembly.sel(time_bin=time_bin,region=region)
+		# 		regressor = pls_regression(neuroid_coord=('neuroid_id','layer','region'))
+		# 		regressor.fit(region_activations, target_assembly)
+		# 		time_bin_regressor[time_bin] = regressor
+		# 	self._temporal_maps[region] = time_bin_regressor
+	# TODO: add region coords to activations?:
+	# TODO: add result caching xarray data: (@store_xarray())
 	def look_at(self, stimuli):
 		layer_regions = {self.region_layer_map[region]: region for region in self.recorded_regions}
 		assert len(layer_regions) == len(self.recorded_regions), f"duplicate layers for {self.recorded_regions}"
 		activations = self.base_model(stimuli, layers=list(layer_regions.keys()))
 
 		activations = self._set_region_coords(activations,layer_regions)
+		return self._temporal_activations(self.identifier, activations)
+		# temporal_assembly = []
+		# for region in self.recorded_regions:
+		# 	temporal_regressors = self._temporal_maps[region]
+		# 	region_activations = activations.sel(region=region)
+		# 	for time_bin in self.time_bins:
+		# 		regressor = temporal_regressors[time_bin]
+		# 		regressed_act = regressor.predict(region_activations)
+		# 		regressed_act = self._package_temporal(time_bin, region, regressed_act)
+		# 		temporal_assembly.append(regressed_act)
+		# temporal_assembly = merge_data_arrays(temporal_assembly)
+		# return temporal_assembly
+
+	@store_xarray(identifier_ignore=['assembly'])
+	def _temporal_activations(self, identifier, assembly):
 		temporal_assembly = []
 		for region in self.recorded_regions:
 			temporal_regressors = self._temporal_maps[region]
@@ -249,10 +266,24 @@ class TemporalModelCommitment(BrainModel):
 			for time_bin in self.time_bins:
 				regressor = temporal_regressors[time_bin]
 				regressed_act = regressor.predict(region_activations)
-				regressed_act = self._package_temporal(time_bin, regressed_act)
+				regressed_act = self._package_temporal(time_bin, region, regressed_act)
 				temporal_assembly.append(regressed_act)
 		temporal_assembly = merge_data_arrays(temporal_assembly)
 		return temporal_assembly
+
+	@store_dict(dict_keys=['temporal_mapped_regions'], identifier_ignore=['temporal_mapped_regions', 'activations','assembly'])
+	def _set_temporal_maps(self, identifier, temporal_mapped_regions, activations, assembly):
+		temporal_maps = {}
+		for region in temporal_mapped_regions:
+			time_bin_regressor = {}
+			region_activations = activations.sel(region=region)
+			for time_bin in assembly.time_bin.values:
+				target_assembly = assembly.sel(time_bin=time_bin,region=region)
+				regressor = pls_regression(neuroid_coord=('neuroid_id','layer','region'))
+				regressor.fit(region_activations, target_assembly)
+				time_bin_regressor[time_bin] = regressor
+			temporal_maps[region] = time_bin_regressor
+		return temporal_maps
 
 	def _set_region_coords(self, activations, layer_regions):
 		coords = { 'region' : ( ('neuroid'), [layer_regions[layer] for layer in activations['layer'].values]) }
@@ -260,14 +291,15 @@ class TemporalModelCommitment(BrainModel):
 		activations = activations.set_index({'neuroid':'region'}, append=True)
 		return activations
 
-	def _package_temporal(self, time_bin, assembly):
+	def _package_temporal(self, time_bin, region, assembly):
 		assembly=assembly.expand_dims('time_bin', axis=-1)
 		coords = {
 					'time_bin_start': (('time_bin'), [time_bin[0]])
 				  , 'time_bin_end': (('time_bin'), [time_bin[1]])
+				  , 'region' : ( ('neuroid'), [region] * assembly.shape[1])
 				 }
 		assembly=assembly.assign_coords(**coords)
-		assembly=assembly.set_index(time_bin=['time_bin_start', 'time_bin_end'])
+		assembly=assembly.set_index(time_bin=['time_bin_start', 'time_bin_end'], neuroid='region', append=True)
 		return assembly
 
 	def start_temporal_recording(self, recording_target, time_bins):
