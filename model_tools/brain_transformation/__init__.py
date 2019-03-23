@@ -271,7 +271,7 @@ class TemporalModelCommitment(BrainModel):
 		temporal_assembly = merge_data_arrays(temporal_assembly)
 		return temporal_assembly
 
-	@store_dict(dict_keys=['temporal_mapped_regions'], identifier_ignore=['temporal_mapped_regions', 'activations','assembly'])
+	@store_dict(dict_key=['temporal_mapped_regions'], identifier_ignore=['temporal_mapped_regions', 'activations','assembly'])
 	def _set_temporal_maps(self, identifier, temporal_mapped_regions, activations, assembly):
 		temporal_maps = {}
 		for region in temporal_mapped_regions:
