@@ -257,7 +257,7 @@ class TemporalModelCommitment(BrainModel):
 		# temporal_assembly = merge_data_arrays(temporal_assembly)
 		# return temporal_assembly
 
-	@store_xarray(identifier_ignore=['assembly'])
+	@store_xarray(identifier_ignore=['assembly'], combine_fields={'assembly': 'assembly'})
 	def _temporal_activations(self, identifier, assembly):
 		temporal_assembly = []
 		for region in self.recorded_regions:
