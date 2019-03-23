@@ -227,17 +227,7 @@ class TemporalModelCommitment(BrainModel):
 		activations = self._set_region_coords(activations, layer_regions)
 		# TODO: add result caching (@store_dict(temporal_mapped, assmebly))
 		self._temporal_maps = self._set_temporal_maps(self.identifier, temporal_mapped_regions, activations, assembly)
-		# for region in temporal_mapped_regions:
-		# 	time_bin_regressor = {}
-		# 	region_activations = activations.sel(region=region)
-		# 	for time_bin in assembly.time_bin.values:
-		# 		target_assembly = assembly.sel(time_bin=time_bin,region=region)
-		# 		regressor = pls_regression(neuroid_coord=('neuroid_id','layer','region'))
-		# 		regressor.fit(region_activations, target_assembly)
-		# 		time_bin_regressor[time_bin] = regressor
-		# 	self._temporal_maps[region] = time_bin_regressor
-	# TODO: add region coords to activations?:
-	# TODO: add result caching xarray data: (@store_xarray())
+		
 	def look_at(self, stimuli):
 		layer_regions = {self.region_layer_map[region]: region for region in self.recorded_regions}
 		assert len(layer_regions) == len(self.recorded_regions), f"duplicate layers for {self.recorded_regions}"
@@ -245,17 +235,6 @@ class TemporalModelCommitment(BrainModel):
 
 		activations = self._set_region_coords(activations,layer_regions)
 		return self._temporal_activations(self.identifier, activations)
-		# temporal_assembly = []
-		# for region in self.recorded_regions:
-		# 	temporal_regressors = self._temporal_maps[region]
-		# 	region_activations = activations.sel(region=region)
-		# 	for time_bin in self.time_bins:
-		# 		regressor = temporal_regressors[time_bin]
-		# 		regressed_act = regressor.predict(region_activations)
-		# 		regressed_act = self._package_temporal(time_bin, region, regressed_act)
-		# 		temporal_assembly.append(regressed_act)
-		# temporal_assembly = merge_data_arrays(temporal_assembly)
-		# return temporal_assembly
 
 	@store(identifier_ignore=['assembly'])
 	def _temporal_activations(self, identifier, assembly):
