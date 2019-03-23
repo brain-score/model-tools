@@ -262,7 +262,7 @@ class TemporalModelCommitment(BrainModel):
 		temporal_assembly = []
 		for region in self.recorded_regions:
 			temporal_regressors = self._temporal_maps[region]
-			region_activations = activations.sel(region=region)
+			region_activations = assembly.sel(region=region)
 			for time_bin in self.time_bins:
 				regressor = temporal_regressors[time_bin]
 				regressed_act = regressor.predict(region_activations)
