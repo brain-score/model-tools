@@ -14,7 +14,7 @@ class PytorchWrapper:
     def __init__(self, model, preprocessing, identifier=None, *args, **kwargs):
         import torch
         logger = logging.getLogger(fullname(self))
-        self._device = "cpu"  # torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.debug(f"Using device {self._device}")
         self._model = model
         self._model = self._model.to(self._device)
@@ -23,6 +23,14 @@ class PytorchWrapper:
             identifier=identifier, get_activations=self.get_activations, preprocessing=preprocessing,
             *args, **kwargs)
         self._extractor.insert_attrs(self)
+
+    @property
+    def identifier(self):
+        return self._extractor.identifier
+
+    @identifier.setter
+    def identifier(self, value):
+        self._extractor.identifier = value
 
     def __call__(self, *args, **kwargs):  # cannot assign __call__ as attribute due to Python convention
         return self._extractor(*args, **kwargs)
