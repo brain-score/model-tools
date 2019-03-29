@@ -1,3 +1,5 @@
+from typing import Optional
+
 from brainio_base.assemblies import merge_data_arrays
 
 from model_tools.brain_transformation import LayerSelection
@@ -10,7 +12,7 @@ from result_caching import store, store_dict
 class TemporalModelCommitment(BrainModel):
     def __init__(self, identifier, base_model, layers, region_layer_map: Optional[dict] = None):
         self.layers = layers
-        self.identifier = identifier
+        self.identifier = identifier or None
         self.base_model = base_model
         self.region_layer_map = region_layer_map or {}
         self.recorded_regions = []
@@ -32,7 +34,9 @@ class TemporalModelCommitment(BrainModel):
 
         stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
 
-        stimuli_identifier = self.identifier + 'temporal_map_stim'
+        stimuli_identifier = None
+        if self.identifier is not None:
+            stimuli_identifier = self.identifier + 'temporal_map_stim'
 
         activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier=stimuli_identifier)
         activations = self._set_region_coords(activations, layer_regions)
@@ -82,6 +86,7 @@ class TemporalModelCommitment(BrainModel):
         return activations
 
     def _package_temporal(self, time_bin, region, assembly):
+        assert len(time_bin) == 2
         assembly = assembly.expand_dims('time_bin', axis=-1)
         coords = {
             'time_bin_start': (('time_bin'), [time_bin[0]])
