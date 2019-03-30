@@ -80,7 +80,6 @@ class TestTemporalModelCommitment:
 		temporal_model.make_temporal(training_assembly)
 		assert len(temporal_model._temporal_maps.keys()) == expected_region_count
 		assert len(temporal_model._temporal_maps[region].keys()) == expected_time_bin_count
-		# assert set(temporal_model._temporal_maps[region].keys()) == expected_time_bins
 		# start recording:
 		temporal_model.start_temporal_recording(region, t_bins)
 		assert temporal_model.recorded_regions == expected_recorded_regions
@@ -89,4 +88,3 @@ class TestTemporalModelCommitment:
 		temporal_activations = temporal_model.look_at(stim)
 		assert set(temporal_activations.region.values) == set(expected_recorded_regions)
 		assert len(set(temporal_activations.time_bin.values)) == expected_recorded_time_bin_cnt
-		# assert set(temporal_activations.time_bin.values) == expected_recorded_time_bins
