@@ -53,14 +53,12 @@ def pytorch_custom():
 	return PytorchWrapper(model=MyModel(), preprocessing=preprocessing)
 
 class TestTemporalModelCommitment:
-	test_data = [(pytorch_custom, ['linear', 'relu2'], 'test_temporal', 'relu2', 'IT', 1, ['IT'], 39, 29)]
-	@pytest.mark.parametrize("model_ctr, layers, identifier, expected_best_layer, region, expected_region_count"
-							", expected_recorded_regions, expected_time_bin_count, expected_recorded_time_bin_cnt"
+	test_data = [(pytorch_custom, ['linear', 'relu2'], 'test_temporal', 'relu2', 'IT', 1, 39, 29)]
+	@pytest.mark.parametrize("model_ctr, layers, identifier, expected_best_layer, region, expected_region_count,"
+							" expected_time_bin_count, expected_recorded_time_bin_cnt"
 							, test_data)
 	def test(self, model_ctr, layers, identifier, expected_best_layer, region
-			, expected_region_count, expected_recorded_regions, expected_time_bin_count, expected_recorded_time_bin_cnt
-			 # , expected_time_bins, expected_recorded_time_bins):
-			 ):
+			, expected_region_count, expected_recorded_regions, expected_time_bin_count, expected_recorded_time_bin_cnt):
 		train_test_assembly_loader = DicarloMajaj2015TemporalLoader()
 		commit_loader = DicarloMajaj2015ITLoader()
 
@@ -86,5 +84,5 @@ class TestTemporalModelCommitment:
 		# look at:
 		stim = get_stim(commit_assembly)
 		temporal_activations = temporal_model.look_at(stim)
-		assert set(temporal_activations.region.values) == set(expected_recorded_regions)
+		assert set(temporal_activations.region.values) == set(region)
 		assert len(set(temporal_activations.time_bin.values)) == expected_recorded_time_bin_cnt

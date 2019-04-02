@@ -26,19 +26,13 @@ class TemporalModelCommitment(BrainModel):
         assert len(set(assembly.time_bin.values)) > 1													# force temporal recordings/assembly
 
         temporal_mapped_regions = set(assembly['region'].values)
-        assert bool \
-            (set(self.region_layer_map.keys()).intersection(temporal_mapped_regions))			        # force simalr brain regions
 
         temporal_mapped_regions = list(set(self.region_layer_map.keys()).intersection(self.region_layer_map.keys()))
         layer_regions = {self.region_layer_map[region]: region for region in temporal_mapped_regions}
 
-        stimulus_set = assembly.stimulus_set[assembly.stimulus_set['image_id'].isin(assembly['image_id'].values)]
+        stimulus_set = assembly.stimulus_set
 
-        stimuli_identifier = None
-        if self.identifier is not None:
-            stimuli_identifier = self.identifier + 'temporal_map_stim'
-
-        activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()), stimuli_identifier=stimuli_identifier)
+        activations = self.base_model(stimulus_set, layers=list(layer_regions.keys()))
         activations = self._set_region_coords(activations, layer_regions)
 
         self._temporal_maps = self._set_temporal_maps(self.identifier, temporal_mapped_regions, activations, assembly)
