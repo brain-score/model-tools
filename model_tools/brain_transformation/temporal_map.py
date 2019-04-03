@@ -2,7 +2,7 @@ from typing import Optional
 
 from brainio_base.assemblies import merge_data_arrays
 
-from model_tools.brain_transformation import LayerSelection
+from model_tools.brain_transformation import ModelCommitment
 
 from brainscore.model_interface import BrainModel
 from brainscore.metrics.regression import pls_regression
@@ -14,7 +14,11 @@ class TemporalModelCommitment(BrainModel):
         self.layers = layers
         self.identifier = identifier or None
         self.base_model = base_model
-        self.region_layer_map = region_layer_map or {}
+        #
+        self.model_commitment = ModelCommitment(self.identifier, self.base_model, self.layers)
+        self.commit_region = self.model_commitment.commit_region
+        self.do_commit_region = self.model_commitment.do_commit_region
+        self.region_layer_map = self.model_commitment.layer_model.region_layer_map
         self.recorded_regions = []
 
         self.time_bins = None
@@ -74,7 +78,7 @@ class TemporalModelCommitment(BrainModel):
         return temporal_maps
 
     def _set_region_coords(self, activations, layer_regions):
-        coords = { 'region' : ( ('neuroid'), [layer_regions[layer] for layer in activations['layer'].values]) }
+        coords = { 'region' : (('neuroid'), [layer_regions[layer] for layer in activations['layer'].values]) }
         activations = activations.assign_coords(**coords)
         activations = activations.set_index({'neuroid' :'region'}, append=True)
         return activations
@@ -85,37 +89,20 @@ class TemporalModelCommitment(BrainModel):
         coords = {
             'time_bin_start': (('time_bin'), [time_bin[0]])
             , 'time_bin_end': (('time_bin'), [time_bin[1]])
-            , 'region' : ( ('neuroid'), [region] * assembly.shape[1])
+            , 'region' : (('neuroid'), [region] * assembly.shape[1])
         }
         assembly = assembly.assign_coords(**coords)
         assembly = assembly.set_index(time_bin=['time_bin_start', 'time_bin_end'], neuroid='region', append=True)
         return assembly
 
-    def start_temporal_recording(self, recording_target, time_bins):
+    def start_recording(self, recording_target, time_bins: Optional[list] = None):
         assert self._temporal_maps
         assert self.region_layer_map
         assert recording_target in self._temporal_maps.keys()
-        if time_bins is not None:
-            assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
-        else:
-            time_bins = self._temporal_maps[recording_target].keys()
-
-        self.recorded_regions = [recording_target]
-        self.time_bins = time_bins
-
-    def start_recording(self, recording_target):
-        assert self._temporal_maps
-        assert self.region_layer_map
-        assert recording_target in self._temporal_maps.keys()
+        self.model_commitment.start_recording(recording_target)
         if self.time_bins is None:
             self.time_bins = self._temporal_maps[recording_target].keys()
+        else:
+            assert set(self._temporal_maps[recording_target].keys()).issuperset(set(time_bins))
         self.recorded_regions = [recording_target]
-
-    def commit_region(self, region, assembly):
-        layer_selection = LayerSelection(model_identifier=self.identifier,
-                                         activations_model=self.base_model, layers=self.layers)
-        best_layer = layer_selection(assembly)
-        self.region_layer_map[region] = best_layer
-
-    def receptive_fields(self, record=True):
-        pass
+        self.time_bins = time_bins
