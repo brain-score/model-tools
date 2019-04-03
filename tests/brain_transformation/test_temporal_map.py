@@ -8,8 +8,7 @@ from pytest import approx
 from model_tools.activations import PytorchWrapper
 from model_tools.brain_transformation.temporal_map import TemporalModelCommitment
 
-# from brainscore.benchmarks.loaders import DicarloMajaj2015TemporalITLowvarLoader, DicarloMajaj2015ITHighvarLoader, \
-# 	DicarloMajaj2015TemporalITHighvarLoader
+from brainscore.benchmarks.loaders import DicarloMajaj2015ITHighvarLoader
 
 def load_test_assemblies(variation, region):
 	if type(variation) is not list:
@@ -47,16 +46,14 @@ def pytorch_custom():
 	return PytorchWrapper(model=MyModel(), preprocessing=preprocessing)
 
 class TestTemporalModelCommitment:
-	test_data = [(pytorch_custom, ['linear', 'relu2'], 'test_temporal', 'IT')]
-	@pytest.mark.parametrize("model_ctr, layers, identifier, region", test_data)
-	def test(self, model_ctr, layers, identifier, region):
-		# train_assembly_loader = DicarloMajaj2015TemporalITLowvarLoader()
-		# test_assembly_loader = DicarloMajaj2015TemporalITHighvarLoader()
-		# commit_loader = DicarloMajaj2015ITHighvarLoader()
+	test_data = [(pytorch_custom, ['linear', 'relu2'], 'IT')]
+	@pytest.mark.parametrize("model_ctr, layers, region", test_data)
+	def test(self, model_ctr, layers, region):
+		commit_loader = DicarloMajaj2015ITHighvarLoader()
+		commit_assembly = commit_loader(average_repetition=False)
 
 		training_assembly = load_test_assemblies([0,3], region)
 		validation_assembly = load_test_assemblies(6, region)
-		# commit_assembly = commit_loader()
 
 		expected_region = region if type(region)==list else [region]
 		expected_region_count = len(expected_region)
@@ -64,12 +61,12 @@ class TestTemporalModelCommitment:
 
 		extractor = pytorch_custom()
 
-		t_bins = [t for t in training_assembly.time_bin.values if t[0] >= 0]
+		t_bins = [t for t in training_assembly.time_bin.values if 0 <= t[0] < 30]
 		expected_recorded_time_count = len(t_bins)
 
-		temporal_model = TemporalModelCommitment(identifier, extractor, layers)
+		temporal_model = TemporalModelCommitment(extractor, layers)
 		# commit region:
-		temporal_model.commit_region(region, validation_assembly)
+		temporal_model.commit_region(region, commit_assembly)
 		temporal_model.do_commit_region(region)
 		# make temporal:
 		temporal_model.make_temporal(training_assembly)
