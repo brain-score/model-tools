@@ -3,7 +3,6 @@ import functools
 import numpy as np
 from os import path
 import pickle as pkl
-from pytest import approx
 
 from model_tools.activations import PytorchWrapper
 from model_tools.brain_transformation.temporal_map import TemporalModelCommitment
@@ -99,5 +98,5 @@ class TestTemporalModelCommitment:
 			test_predictions = regressor.predict(test_activations).values
 			#
 			temporal_model_prediction = temporal_activations.sel(region=region, time_bin=time_test).values
-			assert temporal_model_prediction == approx(test_predictions, rel=1e-3, abs=1e-6)
+			assert temporal_model_prediction == pytest.approx(test_predictions, rel=1e-3, abs=1e-6)
 
