@@ -127,7 +127,7 @@ def tfslim_vgg16():
     session = tf.Session()
     session.run(tf.initialize_all_variables())
     return TensorflowSlimWrapper(identifier='tf-vgg16', labels_offset=1,
-                                 logits=logits, endpoints=endpoints, inputs=placeholder, session=session)
+                                 endpoints=endpoints, inputs=placeholder, session=session)
 
 
 @pytest.mark.parametrize("image_name", ['rgb.jpg', 'grayscale.png', 'grayscale2.jpg', 'grayscale_alpha.png'])
@@ -239,6 +239,31 @@ def test_conv_and_fc():
     model = pytorch_custom()
     activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['conv1', 'linear'])
     assert set(activations['layer'].values) == {'conv1', 'linear'}
+
+
+@pytest.mark.timeout(300)
+def test_merge_large_layers():
+    import torch
+    from torch import nn
+    from model_tools.activations.pytorch import load_preprocess_images
+
+    class LargeModel(nn.Module):
+        def __init__(self):
+            super(LargeModel, self).__init__()
+            self.conv = torch.nn.Conv2d(in_channels=3, out_channels=4, kernel_size=3)
+            self.relu = torch.nn.ReLU()
+
+        def forward(self, x):
+            x = self.conv(x)
+            x = self.relu(x)
+            return x
+
+    preprocessing = functools.partial(load_preprocess_images, image_size=224)
+    model = PytorchWrapper(model=LargeModel(), preprocessing=preprocessing)
+    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')] * 64, layers=['conv', 'relu'])
+    assert len(activations['neuroid']) == 394272
+    assert len(set(activations['neuroid_id'].values)) == len(activations['neuroid'])
+    assert set(activations['layer'].values) == {'conv', 'relu'}
 
 
 class TestFlatten:
