@@ -19,6 +19,10 @@ def load_test_assemblies(variation, region):
 	load_file = path.join(assembly_dir, test_assembly_filename)
 	with open(load_file, "rb") as fh:
 		test_assembly = pkl.load(fh)
+	home_dir = path.expanduser('~')
+	for key, value in test_assembly.stimulus_set.image_paths.items():
+		test_assembly.stimulus_set.image_paths[key] = \
+		test_assembly.stimulus_set.image_paths[key].replace('/braintree/home/fksato', home_dir)
 	return test_assembly
 
 def pytorch_custom():
