@@ -12,7 +12,7 @@ from result_caching import store, store_dict
 class TemporalModelCommitment(BrainModel):
     def __init__(self, identifier, base_model, layers, region_layer_map: Optional[dict] = None):
         self.layers = layers
-        self.identifier = identifier or None
+        self.identifier = identifier
         self.base_model = base_model
         #
         self.model_commitment = ModelCommitment(self.identifier, self.base_model, self.layers)
@@ -70,7 +70,7 @@ class TemporalModelCommitment(BrainModel):
             time_bin_regressor = {}
             region_activations = activations.sel(region=region)
             for time_bin in assembly.time_bin.values:
-                target_assembly = assembly.sel(time_bin=time_bin ,region=region)
+                target_assembly = assembly.sel(time_bin=time_bin, region=region)
                 regressor = pls_regression(neuroid_coord=('neuroid_id' ,'layer' ,'region'))
                 regressor.fit(region_activations, target_assembly)
                 time_bin_regressor[time_bin] = regressor

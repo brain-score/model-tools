@@ -8,6 +8,7 @@ from pytest import approx
 from model_tools.activations import PytorchWrapper
 from model_tools.brain_transformation.temporal_map import TemporalModelCommitment
 
+from brainscore.metrics.regression import pls_regression
 from brainscore.benchmarks.loaders import DicarloMajaj2015ITHighvarLoader
 
 def load_test_assemblies(variation, region):
@@ -64,7 +65,7 @@ class TestTemporalModelCommitment:
 		t_bins = [t for t in training_assembly.time_bin.values if 0 <= t[0] < 30]
 		expected_recorded_time_count = len(t_bins)
 
-		temporal_model = TemporalModelCommitment(extractor, layers)
+		temporal_model = TemporalModelCommitment('', extractor, layers)
 		# commit region:
 		temporal_model.commit_region(region, commit_assembly)
 		temporal_model.do_commit_region(region)
@@ -80,3 +81,18 @@ class TestTemporalModelCommitment:
 		temporal_activations = temporal_model.look_at(stim)
 		assert set(temporal_activations.region.values) == set(expected_region)
 		assert len(set(temporal_activations.time_bin.values)) == expected_recorded_time_count
+		#
+		test_layer = temporal_model.region_layer_map[region]
+		train_stim_set = training_assembly.stimulus_set
+		for time_test in t_bins:
+			target_assembly = training_assembly.sel(time_bin=time_test, region=region)
+			region_activations = extractor(train_stim_set, [test_layer])
+			regressor = pls_regression(neuroid_coord=('neuroid_id', 'layer', 'region'))
+			regressor.fit(region_activations, target_assembly)
+			#
+			test_activations = extractor(stim, [test_layer])
+			test_predictions = regressor.predict(test_activations).values
+			#
+			temporal_model_prediction = temporal_activations.sel(region=region, time_bin=time_test).values
+			assert temporal_model_prediction == approx(test_predictions, rel=1e-3, abs=1e-6)
+
