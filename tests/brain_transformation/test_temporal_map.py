@@ -11,6 +11,8 @@ from model_tools.brain_transformation.temporal_map import TemporalModelCommitmen
 from brainscore.metrics.regression import pls_regression
 from brainscore.benchmarks.loaders import DicarloMajaj2015ITHighvarLoader
 
+from brainio_collection import get_stimulus_set
+
 def load_test_assemblies(variation, region):
 	if type(variation) is not list:
 		variation = [variation]
@@ -19,10 +21,9 @@ def load_test_assemblies(variation, region):
 	load_file = path.join(assembly_dir, test_assembly_filename)
 	with open(load_file, "rb") as fh:
 		test_assembly = pkl.load(fh)
-	home_dir = path.expanduser('~')
-	for key, value in test_assembly.stimulus_set.image_paths.items():
-		test_assembly.stimulus_set.image_paths[key] = \
-		test_assembly.stimulus_set.image_paths[key].replace('/braintree/home/fksato', home_dir)
+	stimulus_set = get_stimulus_set(name='dicarlo.hvm')
+	for key in test_assembly.stimulus_set.image_paths.keys():
+		test_assembly.stimulus_set.image_paths[key] = stimulus_set.image_paths[key]
 	return test_assembly
 
 def pytorch_custom():
