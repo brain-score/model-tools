@@ -17,7 +17,7 @@ class TemporalModelCommitment(BrainModel):
         #
         self.model_commitment = ModelCommitment(self.identifier, self.base_model, self.layers)
         self.commit_region = self.model_commitment.commit_region
-        self.do_commit_region = self.model_commitment.do_commit_region
+        self.region_assemblies = self.model_commitment.region_assemblies
         self.region_layer_map = self.model_commitment.layer_model.region_layer_map
         self.recorded_regions = []
 
@@ -26,7 +26,10 @@ class TemporalModelCommitment(BrainModel):
         self._layer_regions = None
 
     def make_temporal(self, assembly):
-        assert self.region_layer_map																	# force commit_region to come before
+        if not self.region_layer_map:
+            for region in self.region_assemblies.keys():
+                self.model_commitment.do_commit_region(region)
+        # assert self.region_layer_map																	# force commit_region to come before
         assert len(set(assembly.time_bin.values)) > 1													# force temporal recordings/assembly
 
         temporal_mapped_regions = set(assembly['region'].values)
@@ -70,7 +73,7 @@ class TemporalModelCommitment(BrainModel):
             time_bin_regressor = {}
             region_activations = activations.sel(region=region)
             for time_bin in assembly.time_bin.values:
-                target_assembly = assembly.sel(time_bin=time_bin, region=region)
+                target_assembly = assembly.sel(region=region, time_bin=time_bin)
                 regressor = pls_regression(neuroid_coord=('neuroid_id' ,'layer' ,'region'))
                 regressor.fit(region_activations, target_assembly)
                 time_bin_regressor[time_bin] = regressor
@@ -96,10 +99,10 @@ class TemporalModelCommitment(BrainModel):
         return assembly
 
     def start_recording(self, recording_target, time_bins: Optional[list] = None):
+        self.model_commitment.start_recording(recording_target)
         assert self._temporal_maps
         assert self.region_layer_map
         assert recording_target in self._temporal_maps.keys()
-        self.model_commitment.start_recording(recording_target)
         if self.time_bins is None:
             self.time_bins = self._temporal_maps[recording_target].keys()
         else:
