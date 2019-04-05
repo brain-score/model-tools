@@ -8,22 +8,56 @@ from model_tools.activations import PytorchWrapper
 from model_tools.brain_transformation.temporal_map import TemporalModelCommitment
 
 from brainscore.metrics.regression import pls_regression
-from brainscore.benchmarks.loaders import DicarloMajaj2015ITHighvarLoader
+from brainscore.assemblies.private import load_assembly
 
-from brainio_collection import get_stimulus_set
+from xarray import DataArray
+from pandas import DataFrame
 
 def load_test_assemblies(variation, region):
-	if type(variation) is not list:
-		variation = [variation]
-	assembly_dir = path.join(path.dirname(__file__), 'test_temporal_assemblies')
-	test_assembly_filename = 'temporal_test_{}_var{}.pkl'.format(region, ''.join(str(v) for v in variation))
-	load_file = path.join(assembly_dir, test_assembly_filename)
-	with open(load_file, "rb") as fh:
-		test_assembly = pkl.load(fh)
-	stimulus_set = get_stimulus_set(name='dicarlo.hvm')
-	for key in test_assembly.stimulus_set.image_paths.keys():
-		test_assembly.stimulus_set.image_paths[key] = stimulus_set.image_paths[key]
-	return test_assembly
+	neuroid_cnt = 168
+	num_stim = 5
+	time_bin_cnt = 5
+	resp = np.random.rand(num_stim, neuroid_cnt, time_bin_cnt)
+
+	dims = ["presentation", "neuroid", "time_bin"]
+	coords = {  'neuroid_id': ('neuroid', range(neuroid_cnt)),
+	            'region': ('neuroid', [region] * neuroid_cnt),
+				'image_id': ('presentation', range(num_stim)),
+	            'time_bin_start': ('time_bin',  range(-10, 40, 10)),
+				'time_bin_end': ('time_bin', range(0, 50, 10))}
+
+	assembly = DataArray(data=resp, dims=dims, coords=coords)
+	assembly = assembly.set_index(time_bin=['time_bin_start', 'time_bin_end'], neuroid=['region', 'neuroid_id'],
+	                              presentation='image_id', append=True)
+
+	stim_meta = [{'id': k} for k in range(num_stim)]
+	image_paths = {}
+	for i in range(num_stim):
+		f_name = f"im_{i:05}.jpg"
+		im_path = path.join('test_temporal_stimulus', f_name)
+		meta = stim_meta[i]
+		meta['image_id'] = f'{i}'
+		meta['image_file_name'] = f_name
+		image_paths[i] = im_path
+
+	stim_set = DataFrame(stim_meta)
+	stim_set.image_paths = image_paths
+	stim_set.name = 'temporal_testing_stims'
+
+	assembly.attrs['stimulus_set'] = stim_set
+	assembly.attrs['stimulus_set_name'] = 'temporal_testing_stims'
+
+	# if type(variation) is not list:
+	# 	variation = [variation]
+	# assembly_dir = path.join(path.dirname(__file__), 'test_temporal_assemblies')
+	# test_assembly_filename = 'temporal_test_{}_var{}.pkl'.format(region, ''.join(str(v) for v in variation))
+	# load_file = path.join(assembly_dir, test_assembly_filename)
+	# with open(load_file, "rb") as fh:
+	# 	test_assembly = pkl.load(fh)
+	# stimulus_set = get_stimulus_set(name='dicarlo.hvm')
+	# for key in test_assembly.stimulus_set.image_paths.keys():
+	# 	test_assembly.stimulus_set.image_paths[key] = stimulus_set.image_paths[key]
+	return assembly
 
 def pytorch_custom():
 	import torch
@@ -54,7 +88,7 @@ class TestTemporalModelCommitment:
 	test_data = [(pytorch_custom, ['linear', 'relu2'], 'IT')]
 	@pytest.mark.parametrize("model_ctr, layers, region", test_data)
 	def test(self, model_ctr, layers, region):
-		commit_loader = DicarloMajaj2015ITHighvarLoader()
+		commit_loader = load_assembly(name='dicarlo.Majaj2015.temporal.highvar.IT')
 		commit_assembly = commit_loader(average_repetition=False)
 
 		training_assembly = load_test_assemblies([0,3], region)
