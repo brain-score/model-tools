@@ -1,0 +1,33 @@
+Metadata-Version: 1.1
+Name: model-tools
+Version: 0.1.0
+Summary: Tools for predictive models of brain processing.
+Home-page: https://github.com/mschrimpf/model-tools
+Author: Martin Schrimpf
+Author-email: mschrimpf@mit.edu
+License: MIT license
+Description: [![Build Status](https://travis-ci.com/brain-score/model-tools.svg?token=vqt7d2yhhpLGwHsiTZvT&branch=master)](https://travis-ci.com/brain-score/model-tools)
+        
+        # Brain-Score Model Tools
+        
+        Utility for generic models to interact with brain data.
+        
+        
+        ## Environment variables
+        
+        Environment variables are prefixed with `MT_`.
+        
+        | Variable               | Description                                                  |
+        |------------------------|--------------------------------------------------------------|
+        | MT_MULTITHREAD         | whether or not to use multi-threading                        |
+        | MT_HOME                | path to framework root                                       |
+        | MT_IMAGENET_PATH       | path to ImageNet file containing the validation image set    |
+        
+Keywords: brain-score
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7

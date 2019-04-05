@@ -26,6 +26,12 @@ import numpy as np
 MEAN_RGB = [0.485, 0.456, 0.406]
 STDDEV_RGB = [0.229, 0.224, 0.225]
 
+def ColorNormalize(image):
+    imagenet_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+    imagenet_std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+    image = (image - imagenet_mean) / imagenet_std
+
+    return image
 
 def _crop(image, offset_height, offset_width, crop_height, crop_width):
   """Crops the given image using the provided offsets and sizes.
