@@ -14,274 +14,341 @@
 # limitations under the License.
 # ==============================================================================
 """ImageNet preprocessing for ResNet."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
 
-#from tensorflow.python.ops import control_flow_ops
-
-MEAN_RGB = [0.485, 0.456, 0.406]
-STDDEV_RGB = [0.229, 0.224, 0.225]
-
-def ColorNormalize(image):
+def color_normalize(image):
+    image = tf.cast(image, tf.float32) / 255
     imagenet_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     imagenet_std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
     image = (image - imagenet_mean) / imagenet_std
+    return image
+
+def get_resize_scale(height, width, crop_size=224, smallest_side=256):
+    """
+    Get the resize scale so that the shortest side is `smallest_side`
+    """
+    smallest_side = tf.convert_to_tensor(smallest_side, dtype=tf.int32)
+
+    height = tf.to_float(height)
+    width = tf.to_float(width)
+    smallest_side = tf.to_float(smallest_side)
+
+    scale = tf.cond(
+            tf.greater(height, width),
+            lambda: smallest_side / width,
+            lambda: smallest_side / height)
+    return scale
+
+def resize_cast_to_uint8(image):
+    image = tf.cast(
+            tf.image.resize_bilinear(
+                [image],
+                [crop_size, crop_size])[0],
+            dtype=tf.uint8)
+    image.set_shape([crop_size, crop_size, 3])
+    return image
+
+def central_crop_from_jpg(image_string, crop_size=224, smallest_side=256):
+    """
+    Resize the image to make its smallest side to be 256;
+    then get the central 224 crop
+    """
+    shape = tf.image.extract_jpeg_shape(image_string)
+    scale = get_resize_scale(shape[0], shape[1], crop_size=crop_size, smallest_side=smallest_side)
+    cp_height = tf.cast(crop_size / scale, tf.int32)
+    cp_width = tf.cast(crop_size / scale, tf.int32)
+    cp_begin_x = tf.cast((shape[0] - cp_height) / 2, tf.int32)
+    cp_begin_y = tf.cast((shape[1] - cp_width) / 2, tf.int32)
+    bbox = tf.stack([
+            cp_begin_x, cp_begin_y, \
+            cp_height, cp_width])
+    crop_image = tf.image.decode_and_crop_jpeg(
+            image_string,
+            bbox,
+            channels=3)
+    image = resize_cast_to_uint8(crop_image)
 
     return image
 
-def _crop(image, offset_height, offset_width, crop_height, crop_width):
-  """Crops the given image using the provided offsets and sizes.
+def preprocess_for_eval(image_string, resize=None, crop_size=224, smallest_side=256):
+    image = central_crop_from_jpg(image_string, crop_size=crop_size, smallest_side=smallest_side)
 
-  Note that the method doesn't assume we know the input image size but it does
-  assume we know the input image rank.
+    image = color_normalize(image)
 
-  Args:
-    image: `Tensor` image of shape [height, width, channels].
-    offset_height: `Tensor` indicating the height offset.
-    offset_width: `Tensor` indicating the width offset.
-    crop_height: the height of the cropped image.
-    crop_width: the width of the cropped image.
+    if resize is not None:
+        image = tf.image.resize_images(image, [resize, resize], align_corners=True)
+    return image
 
-  Returns:
-    the cropped (and resized) image.
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
 
-  Raises:
-    InvalidArgumentError: if the rank is not 3 or if the image dimensions are
-      less than the crop size.
-  """
-  original_shape = tf.shape(image)
+# import tensorflow as tf
+# import numpy as np
 
-  rank_assertion = tf.Assert(
-      tf.equal(tf.rank(image), 3), ['Rank of image must be equal to 3.'])
-  with tf.control_dependencies([rank_assertion]):
-    cropped_shape = tf.stack([crop_height, crop_width, original_shape[2]])
+# #from tensorflow.python.ops import control_flow_ops
 
-  size_assertion = tf.Assert(
-      tf.logical_and(
-          tf.greater_equal(original_shape[0], crop_height),
-          tf.greater_equal(original_shape[1], crop_width)),
-      ['Crop size greater than the image size.'])
+# MEAN_RGB = [0.485, 0.456, 0.406]
+# STDDEV_RGB = [0.229, 0.224, 0.225]
 
-  offsets = tf.to_int32(tf.stack([offset_height, offset_width, 0]))
+# def ColorNormalize(image):
+#     imagenet_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+#     imagenet_std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+#     image = (image - imagenet_mean) / imagenet_std
 
-  # Use tf.slice instead of crop_to_bounding box as it accepts tensors to
-  # define the crop size.
-  with tf.control_dependencies([size_assertion]):
-    image = tf.slice(image, offsets, cropped_shape)
-  return tf.reshape(image, cropped_shape)
+#     return image
 
+# def _crop(image, offset_height, offset_width, crop_height, crop_width):
+#   """Crops the given image using the provided offsets and sizes.
 
-def distorted_bounding_box_crop(image,
-                                bbox,
-                                min_object_covered=0.1,
-                                aspect_ratio_range=(0.75, 1.33),
-                                area_range=(0.05, 1.0),
-                                max_attempts=100,
-                                scope=None):
-  """Generates cropped_image using a one of the bboxes randomly distorted.
+#   Note that the method doesn't assume we know the input image size but it does
+#   assume we know the input image rank.
 
-  See `tf.image.sample_distorted_bounding_box` for more documentation.
+#   Args:
+#     image: `Tensor` image of shape [height, width, channels].
+#     offset_height: `Tensor` indicating the height offset.
+#     offset_width: `Tensor` indicating the width offset.
+#     crop_height: the height of the cropped image.
+#     crop_width: the width of the cropped image.
 
-  Args:
-    image: `Tensor` of image (it will be converted to floats in [0, 1]).
-    bbox: `Tensor` of bounding boxes arranged `[1, num_boxes, coords]`
-        where each coordinate is [0, 1) and the coordinates are arranged
-        as `[ymin, xmin, ymax, xmax]`. If num_boxes is 0 then use the whole
-        image.
-    min_object_covered: An optional `float`. Defaults to `0.1`. The cropped
-        area of the image must contain at least this fraction of any bounding
-        box supplied.
-    aspect_ratio_range: An optional list of `float`s. The cropped area of the
-        image must have an aspect ratio = width / height within this range.
-    area_range: An optional list of `float`s. The cropped area of the image
-        must contain a fraction of the supplied image within in this range.
-    max_attempts: An optional `int`. Number of attempts at generating a cropped
-        region of the image of the specified constraints. After `max_attempts`
-        failures, return the entire image.
-    scope: Optional `str` for name scope.
-  Returns:
-    (cropped image `Tensor`, distorted bbox `Tensor`).
-  """
-  with tf.name_scope(scope, 'distorted_bounding_box_crop', [image, bbox]):
-    # Each bounding box has shape [1, num_boxes, box coords] and
-    # the coordinates are ordered [ymin, xmin, ymax, xmax].
+#   Returns:
+#     the cropped (and resized) image.
 
-    # A large fraction of image datasets contain a human-annotated bounding
-    # box delineating the region of the image containing the object of interest.
-    # We choose to create a new bounding box for the object which is a randomly
-    # distorted version of the human-annotated bounding box that obeys an
-    # allowed range of aspect ratios, sizes and overlap with the human-annotated
-    # bounding box. If no box is supplied, then we assume the bounding box is
-    # the entire image.
-    sample_distorted_bounding_box = tf.image.sample_distorted_bounding_box(
-        tf.shape(image),
-        bounding_boxes=bbox,
-        min_object_covered=min_object_covered,
-        aspect_ratio_range=aspect_ratio_range,
-        area_range=area_range,
-        max_attempts=max_attempts,
-        use_image_if_no_bounding_boxes=True)
-    bbox_begin, bbox_size, distort_bbox = sample_distorted_bounding_box
+#   Raises:
+#     InvalidArgumentError: if the rank is not 3 or if the image dimensions are
+#       less than the crop size.
+#   """
+#   original_shape = tf.shape(image)
 
-    # Crop the image to the specified bounding box.
-    cropped_image = tf.slice(image, bbox_begin, bbox_size)
-    return cropped_image, distort_bbox
+#   rank_assertion = tf.Assert(
+#       tf.equal(tf.rank(image), 3), ['Rank of image must be equal to 3.'])
+#   with tf.control_dependencies([rank_assertion]):
+#     cropped_shape = tf.stack([crop_height, crop_width, original_shape[2]])
+
+#   size_assertion = tf.Assert(
+#       tf.logical_and(
+#           tf.greater_equal(original_shape[0], crop_height),
+#           tf.greater_equal(original_shape[1], crop_width)),
+#       ['Crop size greater than the image size.'])
+
+#   offsets = tf.to_int32(tf.stack([offset_height, offset_width, 0]))
+
+#   # Use tf.slice instead of crop_to_bounding box as it accepts tensors to
+#   # define the crop size.
+#   with tf.control_dependencies([size_assertion]):
+#     image = tf.slice(image, offsets, cropped_shape)
+#   return tf.reshape(image, cropped_shape)
 
 
-def _random_crop(image, size):
-  """Make a random crop of (`size` x `size`)."""
-  bbox = tf.constant([0.0, 0.0, 1.0, 1.0], dtype=tf.float32, shape=[1, 1, 4])
-  random_image, bbox = distorted_bounding_box_crop(
-      image,
-      bbox,
-      min_object_covered=0.1,
-      aspect_ratio_range=(3. / 4, 4. / 3.),
-      area_range=(0.08, 1.0),
-      max_attempts=1,
-      scope=None)
-  bad = _at_least_x_are_true(tf.shape(image), tf.shape(random_image), 3)
+# def distorted_bounding_box_crop(image,
+#                                 bbox,
+#                                 min_object_covered=0.1,
+#                                 aspect_ratio_range=(0.75, 1.33),
+#                                 area_range=(0.05, 1.0),
+#                                 max_attempts=100,
+#                                 scope=None):
+#   """Generates cropped_image using a one of the bboxes randomly distorted.
 
-  image = tf.cond(
-      bad, lambda: _center_crop(_do_scale(image, size), size),
-      lambda: tf.image.resize_bicubic([random_image], [size, size])[0])
-  return image
+#   See `tf.image.sample_distorted_bounding_box` for more documentation.
 
+#   Args:
+#     image: `Tensor` of image (it will be converted to floats in [0, 1]).
+#     bbox: `Tensor` of bounding boxes arranged `[1, num_boxes, coords]`
+#         where each coordinate is [0, 1) and the coordinates are arranged
+#         as `[ymin, xmin, ymax, xmax]`. If num_boxes is 0 then use the whole
+#         image.
+#     min_object_covered: An optional `float`. Defaults to `0.1`. The cropped
+#         area of the image must contain at least this fraction of any bounding
+#         box supplied.
+#     aspect_ratio_range: An optional list of `float`s. The cropped area of the
+#         image must have an aspect ratio = width / height within this range.
+#     area_range: An optional list of `float`s. The cropped area of the image
+#         must contain a fraction of the supplied image within in this range.
+#     max_attempts: An optional `int`. Number of attempts at generating a cropped
+#         region of the image of the specified constraints. After `max_attempts`
+#         failures, return the entire image.
+#     scope: Optional `str` for name scope.
+#   Returns:
+#     (cropped image `Tensor`, distorted bbox `Tensor`).
+#   """
+#   with tf.name_scope(scope, 'distorted_bounding_box_crop', [image, bbox]):
+#     # Each bounding box has shape [1, num_boxes, box coords] and
+#     # the coordinates are ordered [ymin, xmin, ymax, xmax].
 
-def _flip(image):
-  """Random horizontal image flip."""
-  image = tf.image.random_flip_left_right(image)
-  return image
+#     # A large fraction of image datasets contain a human-annotated bounding
+#     # box delineating the region of the image containing the object of interest.
+#     # We choose to create a new bounding box for the object which is a randomly
+#     # distorted version of the human-annotated bounding box that obeys an
+#     # allowed range of aspect ratios, sizes and overlap with the human-annotated
+#     # bounding box. If no box is supplied, then we assume the bounding box is
+#     # the entire image.
+#     sample_distorted_bounding_box = tf.image.sample_distorted_bounding_box(
+#         tf.shape(image),
+#         bounding_boxes=bbox,
+#         min_object_covered=min_object_covered,
+#         aspect_ratio_range=aspect_ratio_range,
+#         area_range=area_range,
+#         max_attempts=max_attempts,
+#         use_image_if_no_bounding_boxes=True)
+#     bbox_begin, bbox_size, distort_bbox = sample_distorted_bounding_box
 
-
-def _at_least_x_are_true(a, b, x):
-  """At least `x` of `a` and `b` `Tensors` are true."""
-  match = tf.equal(a, b)
-  match = tf.cast(match, tf.int32)
-  return tf.greater_equal(tf.reduce_sum(match), x)
-
-
-def _do_scale(image, size):
-  """Rescale the image by scaling the smaller spatial dimension to `size`."""
-  shape = tf.cast(tf.shape(image), tf.float32)
-  w_greater = tf.greater(shape[0], shape[1])
-  shape = tf.cond(w_greater,
-                  lambda: tf.cast([shape[0] / shape[1] * size, size], tf.int32),
-                  lambda: tf.cast([size, shape[1] / shape[0] * size], tf.int32))
-
-  return tf.image.resize_bicubic([image], shape)[0]
-
-
-def _center_crop(image, size):
-  """Crops to center of image with specified `size`."""
-  image_height = tf.shape(image)[0]
-  image_width = tf.shape(image)[1]
-
-  offset_height = ((image_height - size) + 1) / 2
-  offset_width = ((image_width - size) + 1) / 2
-  image = _crop(image, offset_height, offset_width, size, size)
-  return image
-
-
-def _normalize(image):
-  """Normalize the image to zero mean and unit variance."""
-  offset = tf.constant(MEAN_RGB, shape=[1, 1, 3])
-  image -= offset
-
-  scale = tf.constant(STDDEV_RGB, shape=[1, 1, 3])
-  image /= scale
-  return image
+#     # Crop the image to the specified bounding box.
+#     cropped_image = tf.slice(image, bbox_begin, bbox_size)
+#     return cropped_image, distort_bbox
 
 
-def preprocess_for_train(image, image_size=224, image_resize=None):
-  """Preprocesses the given image for evaluation.
+# def _random_crop(image, size):
+#   """Make a random crop of (`size` x `size`)."""
+#   bbox = tf.constant([0.0, 0.0, 1.0, 1.0], dtype=tf.float32, shape=[1, 1, 4])
+#   random_image, bbox = distorted_bounding_box_crop(
+#       image,
+#       bbox,
+#       min_object_covered=0.1,
+#       aspect_ratio_range=(3. / 4, 4. / 3.),
+#       area_range=(0.08, 1.0),
+#       max_attempts=1,
+#       scope=None)
+#   bad = _at_least_x_are_true(tf.shape(image), tf.shape(random_image), 3)
 
-  Args:
-    image: `Tensor` representing an image of arbitrary size.
+#   image = tf.cond(
+#       bad, lambda: _center_crop(_do_scale(image, size), size),
+#       lambda: tf.image.resize_bicubic([random_image], [size, size])[0])
+#   return image
 
-  Returns:
-    A preprocessed image `Tensor`.
-  """
-  image = random_sized_crop(image, image_size, image_size)
-  image = _normalize(image)
-  image = _flip(image)
-  image = tf.reshape(image, [image_size, image_size, 3])
-  # resizing
-  if image_resize is not None:
-    image = tf.image.resize_images(image, [image_resize, image_resize], align_corners=True)
+
+# def _flip(image):
+#   """Random horizontal image flip."""
+#   image = tf.image.random_flip_left_right(image)
+#   return image
+
+
+# def _at_least_x_are_true(a, b, x):
+#   """At least `x` of `a` and `b` `Tensors` are true."""
+#   match = tf.equal(a, b)
+#   match = tf.cast(match, tf.int32)
+#   return tf.greater_equal(tf.reduce_sum(match), x)
+
+
+# def _do_scale(image, size):
+#   """Rescale the image by scaling the smaller spatial dimension to `size`."""
+#   shape = tf.cast(tf.shape(image), tf.float32)
+#   w_greater = tf.greater(shape[0], shape[1])
+#   shape = tf.cond(w_greater,
+#                   lambda: tf.cast([shape[0] / shape[1] * size, size], tf.int32),
+#                   lambda: tf.cast([size, shape[1] / shape[0] * size], tf.int32))
+
+#   return tf.image.resize_bicubic([image], shape)[0]
+
+
+# def _center_crop(image, size):
+#   """Crops to center of image with specified `size`."""
+#   image_height = tf.shape(image)[0]
+#   image_width = tf.shape(image)[1]
+
+#   offset_height = ((image_height - size) + 1) / 2
+#   offset_width = ((image_width - size) + 1) / 2
+#   image = _crop(image, offset_height, offset_width, size, size)
+#   return image
+
+
+# def _normalize(image):
+#   """Normalize the image to zero mean and unit variance."""
+#   offset = tf.constant(MEAN_RGB, shape=[1, 1, 3])
+#   image -= offset
+
+#   scale = tf.constant(STDDEV_RGB, shape=[1, 1, 3])
+#   image /= scale
+#   return image
+
+
+# def preprocess_for_train(image, image_size=224, image_resize=None):
+#   """Preprocesses the given image for evaluation.
+
+#   Args:
+#     image: `Tensor` representing an image of arbitrary size.
+
+#   Returns:
+#     A preprocessed image `Tensor`.
+#   """
+#   image = random_sized_crop(image, image_size, image_size)
+#   image = _normalize(image)
+#   image = _flip(image)
+#   image = tf.reshape(image, [image_size, image_size, 3])
+#   # resizing
+#   if image_resize is not None:
+#     image = tf.image.resize_images(image, [image_resize, image_resize], align_corners=True)
   
-  return image
+#   return image
 
 
-def preprocess_for_eval(image, image_size=224, image_resize=None):
-  """Preprocesses the given image for evaluation.
+# def preprocess_for_eval(image, image_size=224, image_resize=None):
+#   """Preprocesses the given image for evaluation.
 
-  Args:
-    image: `Tensor` representing an image of arbitrary size.
+#   Args:
+#     image: `Tensor` representing an image of arbitrary size.
 
-  Returns:
-    A preprocessed image `Tensor`.
-  """
-  image = _do_scale(image, image_size + 32)
-  image = _normalize(image)
-  image = _center_crop(image, image_size)
-  image = tf.reshape(image, [image_size, image_size, 3])
-  # resizing
-  if image_resize is not None:  
-    image = tf.image.resize_images(image, [image_resize, image_resize], align_corners=True)  
+#   Returns:
+#     A preprocessed image `Tensor`.
+#   """
+#   image = _do_scale(image, image_size + 32)
+#   image = _normalize(image)
+#   image = _center_crop(image, image_size)
+#   image = tf.reshape(image, [image_size, image_size, 3])
+#   # resizing
+#   if image_resize is not None:  
+#     image = tf.image.resize_images(image, [image_resize, image_resize], align_corners=True)  
 
-  return image
+#   return image
 
 
-def preprocess_image(image, is_training=False, image_size=224, image_resize=None):
-  """Preprocesses the given image.
+# def preprocess_image(image, is_training=False, image_size=224, image_resize=None):
+#   """Preprocesses the given image.
 
-  Args:
-    image: `Tensor` representing an image of arbitrary size.
-    is_training: `bool` for whether the preprocessing is for training.
+#   Args:
+#     image: `Tensor` representing an image of arbitrary size.
+#     is_training: `bool` for whether the preprocessing is for training.
 
-  Returns:
-    A preprocessed image `Tensor`.
-  """
-  if is_training:
-    return preprocess_for_train(image, image_size=image_size, image_resize=image_resize)
-  else:
-    return preprocess_for_eval(image, image_size=image_size, image_resize=image_resize)
+#   Returns:
+#     A preprocessed image `Tensor`.
+#   """
+#   if is_training:
+#     return preprocess_for_train(image, image_size=image_size, image_resize=image_resize)
+#   else:
+#     return preprocess_for_eval(image, image_size=image_size, image_resize=image_resize)
 
-def random_sized_crop(image,
-                      out_height,
-                      out_width,
-                      random_seed=3,
-                      num_channels=3,
-                      fix_aspect_ratio=False,
-                      size_minval=0.08):
+# def random_sized_crop(image,
+#                       out_height,
+#                       out_width,
+#                       random_seed=3,
+#                       num_channels=3,
+#                       fix_aspect_ratio=False,
+#                       size_minval=0.08):
 
-    shape = tf.shape(image)
-    height = tf.cast(shape[0], tf.float32)
-    width = tf.cast(shape[1], tf.float32)
+#     shape = tf.shape(image)
+#     height = tf.cast(shape[0], tf.float32)
+#     width = tf.cast(shape[1], tf.float32)
 
-    area = height*width
-    rnd_area = tf.random_uniform(shape=[1], minval=size_minval, maxval=1.0, dtype=tf.float32, seed=random_seed)[0] * area
+#     area = height*width
+#     rnd_area = tf.random_uniform(shape=[1], minval=size_minval, maxval=1.0, dtype=tf.float32, seed=random_seed)[0] * area
 
-    if fix_aspect_ratio:
-        asp_ratio = 1
-    else:
-        asp_ratio = tf.random_uniform(shape=[1], minval=3.0/4, maxval=4.0/3, dtype=tf.float32, seed=random_seed)[0]
+#     if fix_aspect_ratio:
+#         asp_ratio = 1
+#     else:
+#         asp_ratio = tf.random_uniform(shape=[1], minval=3.0/4, maxval=4.0/3, dtype=tf.float32, seed=random_seed)[0]
     
-    crop_height = tf.sqrt(rnd_area * asp_ratio)
-    crop_width = tf.sqrt(rnd_area / asp_ratio)
-    div_ratio = tf.maximum(crop_height/height, tf.constant(1.0, dtype=tf.float32))
-    div_ratio = tf.maximum(crop_width/width, div_ratio)
+#     crop_height = tf.sqrt(rnd_area * asp_ratio)
+#     crop_width = tf.sqrt(rnd_area / asp_ratio)
+#     div_ratio = tf.maximum(crop_height/height, tf.constant(1.0, dtype=tf.float32))
+#     div_ratio = tf.maximum(crop_width/width, div_ratio)
 
-    crop_height = tf.cast(crop_height/div_ratio, tf.int32)
-    crop_width = tf.cast(crop_width/div_ratio, tf.int32)
+#     crop_height = tf.cast(crop_height/div_ratio, tf.int32)
+#     crop_width = tf.cast(crop_width/div_ratio, tf.int32)
 
-    crop_image = tf.random_crop(image, [crop_height, crop_width, num_channels])
-    image = tf.image.resize_images(crop_image, [out_height, out_width])
+#     crop_image = tf.random_crop(image, [crop_height, crop_width, num_channels])
+#     image = tf.image.resize_images(crop_image, [out_height, out_width])
 
-    image.set_shape([out_height, out_width, num_channels])
-    print("random size cropped an image")
-    return image
+#     image.set_shape([out_height, out_width, num_channels])
+#     print("random size cropped an image")
+#     return image
