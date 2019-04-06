@@ -70,9 +70,9 @@ def pytorch_custom():
 	from torch import nn
 	from model_tools.activations.pytorch import load_preprocess_images
 
-	class MyModel(nn.Module):
+	class MyModel_Temporal(nn.Module):
 		def __init__(self):
-			super(MyModel, self).__init__()
+			super(MyModel_Temporal, self).__init__()
 			self.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=2, kernel_size=3)
 			self.relu1 = torch.nn.ReLU()
 			linear_input_size = np.power((224 - 3 + 2 * 0) / 1 + 1, 2) * 2
@@ -88,7 +88,7 @@ def pytorch_custom():
 			return x
 
 	preprocessing = functools.partial(load_preprocess_images, image_size=224)
-	return PytorchWrapper(model=MyModel(), preprocessing=preprocessing)
+	return PytorchWrapper(model=MyModel_Temporal(), preprocessing=preprocessing)
 
 class TestTemporalModelCommitment:
 	test_data = [(pytorch_custom, ['linear', 'relu2'], 'IT')]
@@ -104,7 +104,7 @@ class TestTemporalModelCommitment:
 		expected_region_count = len(expected_region)
 		expected_time_bin_count = len(training_assembly.time_bin.values)
 
-		extractor = pytorch_custom()
+		extractor = model_ctr()
 
 		t_bins = [t for t in training_assembly.time_bin.values if 0 <= t[0] < 30]
 		expected_recorded_time_count = len(t_bins)
