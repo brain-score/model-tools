@@ -16,6 +16,7 @@ from brainio_base.stimuli import StimulusSet
 from brainio_base.assemblies import NeuronRecordingAssembly
 
 def load_test_assemblies(variation, region):
+	image_dir = path.join(path.dirname(path.abspath(__file__)), 'test_temporal_stimulus')
 	if type(variation) is not list:
 		variation = [variation]
 
@@ -45,7 +46,7 @@ def load_test_assemblies(variation, region):
 	image_paths = {}
 	for i in range(num_stim):
 		f_name = f"im_{i:05}.jpg"
-		im_path = path.join('test_temporal_stimulus', f_name)
+		im_path = path.join(image_dir, f_name)
 
 		meta = stim_meta[i]
 		meta['image_id'] = f'{i}'
@@ -56,12 +57,12 @@ def load_test_assemblies(variation, region):
 
 	stim_set = StimulusSet(stim_set)
 	stim_set.image_paths = image_paths
-	stim_set.name = f'temporal_testing_stims_{region}_var{"".join(str(v) for v in variation)}'
+	stim_set.name = f'testing_temporal_stims_{region}_var{"".join(str(v) for v in variation)}'
 
 	assembly = NeuronRecordingAssembly(assembly)
 
 	assembly.attrs['stimulus_set'] = stim_set
-	assembly.attrs['stimulus_set_name'] = 'temporal_testing_stims'
+	assembly.attrs['stimulus_set_name'] = stim_set.name
 	return assembly
 
 def pytorch_custom():
