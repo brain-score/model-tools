@@ -4,12 +4,12 @@ import numpy as np
 from tqdm import tqdm
 from typing import Optional
 
-from brainscore.assemblies import average_repetition
+#from brainscore.assemblies import average_repetition
 from brainscore.benchmarks import BenchmarkBase, ceil_score
-from brainscore.benchmarks.regressing import timebins_from_assembly
+#from brainscore.benchmarks.regressing import timebins_from_assembly
 from brainscore.metrics import Score
 from brainscore.metrics.ceiling import InternalConsistency
-from brainscore.metrics.regression import CrossRegressedCorrelation, pls_regression, pearsonr_correlation
+#from brainscore.metrics.regression import CrossRegressedCorrelation, pls_regression, pearsonr_correlation
 from brainscore.metrics.transformations import Split
 from brainscore.model_interface import BrainModel
 from brainscore.utils import fullname
