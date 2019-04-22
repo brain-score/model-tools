@@ -11,6 +11,7 @@ class TFProbabilitiesClassifier:
     def __init__(self,
                  init_lr=1e-4,
                  max_epochs=40, 
+                 zscore_feats=True,
                  train_batch_size=64,
                  eval_batch_size=240, 
                  activation=None,
@@ -24,6 +25,7 @@ class TFProbabilitiesClassifier:
         :param eval_batch_size: prediction batch size
         :param activation: what activation to use if any
         :param init_lr: initial learning rate
+        :param zscore_feats: whether to zscore model features
         :param tol: tolerance - stops the optimization if reaches below tol
         :param fc_weight_decay: regularization coefficient for fully connected layers (inverse of sklearn C)
         :params fc_dropout: dropout parameter for fc layers
@@ -31,6 +33,7 @@ class TFProbabilitiesClassifier:
         """
         self._train_batch_size = train_batch_size
         self._eval_batch_size = eval_batch_size
+        self._zscore_feats = zscore_feats
         self._lr = init_lr
         self._tol = tol
         self._activation = activation
@@ -200,9 +203,10 @@ class TFProbabilitiesClassifier:
         :param X: Source data, first dimension is examples
         :param Y: Target data, first dimension is examples
         """
-        import sklearn
-        self._scaler = sklearn.preprocessing.StandardScaler().fit(X)
-        X = self._scaler.transform(X)
+        if self._zscore_feats:
+            import sklearn
+            self._scaler = sklearn.preprocessing.StandardScaler().fit(X)
+            X = self._scaler.transform(X)
         Y, self._label_mapping = self.labels_to_indices(Y.values)
         self.setup()
         assert X.ndim == 2, 'Input matrix rank should be 2.'
@@ -229,7 +233,10 @@ class TFProbabilitiesClassifier:
         import tensorflow as tf
         assert len(X.shape) == 2, "expected 2-dimensional input"
         assert(X.shape[0] % self._eval_batch_size == 0)
-        scaled_X = self._scaler.transform(X)
+        if self._zscore_feats:
+            scaled_X = self._scaler.transform(X)
+        else:
+            scaled_X = X
         with self._graph.as_default():
             preds = []
             for batch in self._iterate_minibatches(scaled_X, batchsize=self._eval_batch_size, shuffle=False):
