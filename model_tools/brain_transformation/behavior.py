@@ -6,6 +6,7 @@ import sklearn.multioutput
 
 from brainio_base.assemblies import walk_coords, array_is_element, BehavioralAssembly
 from brainscore.model_interface import BrainModel
+from model_tools.brain_transformation.tf_behavior import TFProbabilitiesClassifier
 
 
 class BehaviorArbiter(BrainModel):
@@ -49,7 +50,8 @@ class ProbabilitiesMapping(BrainModel):
         self.identifier = identifier
         self.activations_model = activations_model
         self.layer = layer
-        self.classifier = ProbabilitiesMapping.ProbabilitiesClassifier()
+        # self.classifier = ProbabilitiesMapping.ProbabilitiesClassifier()
+        self.classifier = TFProbabilitiesClassifier()
         self.current_task = None
 
     def start_task(self, task: BrainModel.Task, fitting_stimuli):
@@ -71,38 +73,38 @@ class ProbabilitiesMapping(BrainModel):
         prediction = self.classifier.predict_proba(features)
         return prediction
 
-    class ProbabilitiesClassifier:
-        def __init__(self, classifier_c=1e-3):
-            self._classifier = sklearn.linear_model.LogisticRegression(
-                multi_class='multinomial', solver='newton-cg', C=classifier_c)
-            self._label_mapping = None
-            self._scaler = None
+    # class ProbabilitiesClassifier:
+    #     def __init__(self, classifier_c=1e-3):
+    #         self._classifier = sklearn.linear_model.LogisticRegression(
+    #             multi_class='multinomial', solver='newton-cg', C=classifier_c)
+    #         self._label_mapping = None
+    #         self._scaler = None
 
-        def fit(self, X, Y):
-            self._scaler = sklearn.preprocessing.StandardScaler().fit(X)
-            X = self._scaler.transform(X)
-            Y, self._label_mapping = self.labels_to_indices(Y.values)
-            self._classifier.fit(X, Y)
-            return self
+    #     def fit(self, X, Y):
+    #         self._scaler = sklearn.preprocessing.StandardScaler().fit(X)
+    #         X = self._scaler.transform(X)
+    #         Y, self._label_mapping = self.labels_to_indices(Y.values)
+    #         self._classifier.fit(X, Y)
+    #         return self
 
-        def predict_proba(self, X):
-            assert len(X.shape) == 2, "expected 2-dimensional input"
-            scaled_X = self._scaler.transform(X)
-            proba = self._classifier.predict_proba(scaled_X)
-            # we take only the 0th dimension because the 1st dimension is just the features
-            X_coords = {coord: (dims, value) for coord, dims, value in walk_coords(X)
-                        if array_is_element(dims, X.dims[0])}
-            proba = BehavioralAssembly(proba,
-                                       coords={**X_coords, **{'choice': list(self._label_mapping.values())}},
-                                       dims=[X.dims[0], 'choice'])
-            return proba
+    #     def predict_proba(self, X):
+    #         assert len(X.shape) == 2, "expected 2-dimensional input"
+    #         scaled_X = self._scaler.transform(X)
+    #         proba = self._classifier.predict_proba(scaled_X)
+    #         # we take only the 0th dimension because the 1st dimension is just the features
+    #         X_coords = {coord: (dims, value) for coord, dims, value in walk_coords(X)
+    #                     if array_is_element(dims, X.dims[0])}
+    #         proba = BehavioralAssembly(proba,
+    #                                    coords={**X_coords, **{'choice': list(self._label_mapping.values())}},
+    #                                    dims=[X.dims[0], 'choice'])
+    #         return proba
 
-        def labels_to_indices(self, labels):
-            label2index = OrderedDict()
-            indices = []
-            for label in labels:
-                if label not in label2index:
-                    label2index[label] = (max(label2index.values()) + 1) if len(label2index) > 0 else 0
-                indices.append(label2index[label])
-            index2label = OrderedDict((index, label) for label, index in label2index.items())
-            return indices, index2label
+    #     def labels_to_indices(self, labels):
+    #         label2index = OrderedDict()
+    #         indices = []
+    #         for label in labels:
+    #             if label not in label2index:
+    #                 label2index[label] = (max(label2index.values()) + 1) if len(label2index) > 0 else 0
+    #             indices.append(label2index[label])
+    #         index2label = OrderedDict((index, label) for label, index in label2index.items())
+    #         return indices, index2label
