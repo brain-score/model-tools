@@ -11,15 +11,17 @@ class TFProbabilitiesClassifier:
     def __init__(self,
                  init_lr=1e-4,
                  max_epochs=40, 
-                 batch_size=240, 
+                 train_batch_size=64,
+                 eval_batch_size=240, 
                  activation=None,
-                 fc_weight_decay=1e3,
+                 fc_weight_decay=0.463, # 1/(C_svc * num_objectome_imgs) = 1/(1e-3 * 2160), based on https://stats.stackexchange.com/questions/216095/how-does-alpha-relate-to-c-in-scikit-learns-sgdclassifier
                  fc_dropout = 1.0,
                  tol=1e-4,
                  log_rate=5, gpu_options=None):
         """
         mapping function class.
-        :param batch_size: batch size
+        :param train_batch_size: train batch size
+        :param eval_batch_size: prediction batch size
         :param activation: what activation to use if any
         :param init_lr: initial learning rate
         :param tol: tolerance - stops the optimization if reaches below tol
@@ -27,7 +29,8 @@ class TFProbabilitiesClassifier:
         :params fc_dropout: dropout parameter for fc layers
         :param log_rate: rate of logging the loss values (in epochs)
         """
-        self._batch_size = batch_size
+        self._train_batch_size = train_batch_size
+        self._eval_batch_size = eval_batch_size
         self._lr = init_lr
         self._tol = tol
         self._activation = activation
@@ -208,7 +211,7 @@ class TFProbabilitiesClassifier:
             lr = self._lr
             for epoch in tqdm(range(self._max_epochs), desc=' epochs'):
                 for counter, batch in enumerate(
-                        self._iterate_minibatches(X, Y, batchsize=self._batch_size, shuffle=True)):
+                        self._iterate_minibatches(X, Y, batchsize=self._train_batch_size, shuffle=True)):
                     feed_dict = {self._input_placeholder: batch[0],
                                  self._target_placeholder: batch[1],
                                  self._lr_ph: lr,
@@ -225,11 +228,11 @@ class TFProbabilitiesClassifier:
     def predict_proba(self, X):
         import tensorflow as tf
         assert len(X.shape) == 2, "expected 2-dimensional input"
-        assert(X.shape[0] % self._batch_size == 0)
+        assert(X.shape[0] % self._eval_batch_size == 0)
         scaled_X = self._scaler.transform(X)
         with self._graph.as_default():
             preds = []
-            for batch in self._iterate_minibatches(scaled_X, batchsize=self._batch_size, shuffle=False):
+            for batch in self._iterate_minibatches(scaled_X, batchsize=self._eval_batch_size, shuffle=False):
                 feed_dict = {self._input_placeholder: batch, self._fc_keep_prob: 1.0}
                 preds.append(np.squeeze(self._sess.run([tf.nn.softmax(self._predictions)], feed_dict=feed_dict)))
             proba = np.concatenate(preds, axis=0)
