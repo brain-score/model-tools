@@ -1,8 +1,18 @@
+import logging
+from collections import OrderedDict
+
+import numpy as np
+from tqdm import tqdm
+
+from brainio_base.assemblies import walk_coords, array_is_element, BehavioralAssembly
+from brainscore.utils import fullname
+
 class TFProbabilitiesClassifier:
     def __init__(self,
                  init_lr=1e-4,
                  max_epochs=40, 
-                 batch_size=64, activation=None,
+                 batch_size=240, 
+                 activation=None,
                  fc_weight_decay=1e3,
                  fc_dropout = 1.0,
                  tol=1e-4,
@@ -19,6 +29,7 @@ class TFProbabilitiesClassifier:
         """
         self._batch_size = batch_size
         self._lr = init_lr
+        self._tol = tol
         self._activation = activation
         self._fc_weight_decay = fc_weight_decay
         self._fc_dropout = fc_dropout
@@ -32,7 +43,7 @@ class TFProbabilitiesClassifier:
         self._scaler = None
         self._logger = logging.getLogger(fullname(self))
 
-    def _iterate_minibatches(self, inputs, targets=None, batchsize=64, shuffle=False):
+    def _iterate_minibatches(self, inputs, targets=None, batchsize=240, shuffle=False):
         """
         Iterates over inputs with minibatches
         :param inputs: input dataset, first dimension should be examples
@@ -62,23 +73,71 @@ class TFProbabilitiesClassifier:
             self._lr_ph = tf.placeholder(dtype=tf.float32)
             self._opt = tf.train.AdamOptimizer(learning_rate=self._lr_ph)
 
+    def initializer(self, kind='xavier', *args, **kwargs):
+        import tensorflow as tf
+        if kind == 'xavier':
+            init = tf.contrib.layers.xavier_initializer(*args, **kwargs)
+        else:
+            init = getattr(tf, kind + '_initializer')(*args, **kwargs)
+        return init
+
+    def fc(self, 
+           inp,
+           out_depth,
+           kernel_init='xavier',
+           kernel_init_kwargs=None,
+           bias=1,
+           weight_decay=None,
+           activation=None,
+           name='fc'):
+   
+        import tensorflow as tf 
+        if weight_decay is None:
+            weight_decay = 0.
+        # assert out_shape is not None
+        if kernel_init_kwargs is None:
+            kernel_init_kwargs = {}
+        resh = inp
+        assert(len(resh.get_shape().as_list()) == 2)
+        in_depth = resh.get_shape().as_list()[-1]
+    
+        # weights
+        init = self.initializer(kernel_init, **kernel_init_kwargs)
+        kernel = tf.get_variable(initializer=init,
+                                shape=[in_depth, out_depth],
+                                dtype=tf.float32,
+                                regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
+                                name='weights')
+        init = self.initializer(kind='constant', value=bias)
+        biases = tf.get_variable(initializer=init,
+                                shape=[out_depth],
+                                dtype=tf.float32,
+                                regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
+                                name='bias')
+    
+        # ops
+        fcm = tf.matmul(resh, kernel)
+        output = tf.nn.bias_add(fcm, biases, name=name)
+    
+        if activation is not None:
+            output = getattr(tf.nn, activation)(output, name=activation)
+        return output
+
     def _make_behavioral_map(self):
         """
         Makes the temporal mapping function computational graph
         """
         import tensorflow as tf
-        from tfutils.model_tool_old import fc as tfutils_fc
         num_classes = len(self._label_mapping.keys())
         assert num_classes == 24
         with self._graph.as_default():
             with tf.variable_scope('behavioral_mapping'):
                 out = self._input_placeholder
                 out = tf.nn.dropout(out, keep_prob=self._fc_keep_prob, name="dropout_out")
-                pred = tfutils_fc(out, 
-                                    out_depth=num_classes, 
-                                    activation=self._activation, 
-                                    batch_norm=False, 
-                                    weight_decay=self._fc_weight_decay, name="out")
+                pred = self.fc(out, 
+                               out_depth=num_classes, 
+                               activation=self._activation, 
+                               weight_decay=self._fc_weight_decay, name="out")
 
                 self._predictions = pred
 
@@ -109,7 +168,7 @@ class TFProbabilitiesClassifier:
         assert len(Y.shape) == 1
         with self._graph.as_default():
             self._input_placeholder = tf.placeholder(dtype=tf.float32, shape=[None] + list(X.shape[1:]))
-            self._target_placeholder = tf.placeholder(dtype=tf.float32, shape=[None])
+            self._target_placeholder = tf.placeholder(dtype=tf.int32, shape=[None])
             self._fc_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
             # Build the model graph
             self._make_behavioral_map()
@@ -130,7 +189,7 @@ class TFProbabilitiesClassifier:
                 label2index[label] = (max(label2index.values()) + 1) if len(label2index) > 0 else 0
             indices.append(label2index[label])
         index2label = OrderedDict((index, label) for label, index in label2index.items())
-        return indices, index2label
+        return np.array(indices), index2label
 
     def fit(self, X, Y):
         """
@@ -139,7 +198,6 @@ class TFProbabilitiesClassifier:
         :param Y: Target data, first dimension is examples
         """
         import sklearn
-        assert not np.isnan(X).any() and not np.isnan(Y).any()
         self._scaler = sklearn.preprocessing.StandardScaler().fit(X)
         X = self._scaler.transform(X)
         Y, self._label_mapping = self.labels_to_indices(Y.values)
@@ -165,16 +223,16 @@ class TFProbabilitiesClassifier:
                     break
 
     def predict_proba(self, X):
+        import tensorflow as tf
         assert len(X.shape) == 2, "expected 2-dimensional input"
-        assert not np.isnan(X).any()
-        X = self._scaler.transform(X)
+        assert(X.shape[0] % self._batch_size == 0)
+        scaled_X = self._scaler.transform(X)
         with self._graph.as_default():
             preds = []
-            for batch in self._iterate_minibatches(X, batchsize=self._batch_size, shuffle=False):
+            for batch in self._iterate_minibatches(scaled_X, batchsize=self._batch_size, shuffle=False):
                 feed_dict = {self._input_placeholder: batch, self._fc_keep_prob: 1.0}
-                preds.append(np.squeeze(self._sess.run([self._predictions], feed_dict=feed_dict)))
-            concat_preds = np.concatenate(preds, axis=0)
-        proba = tf.nn.softmax(concat_preds)
+                preds.append(np.squeeze(self._sess.run([tf.nn.softmax(self._predictions)], feed_dict=feed_dict)))
+            proba = np.concatenate(preds, axis=0)
         # we take only the 0th dimension because the 1st dimension is just the features
         X_coords = {coord: (dims, value) for coord, dims, value in walk_coords(X)
                     if array_is_element(dims, X.dims[0])}
