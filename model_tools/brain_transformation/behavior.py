@@ -52,7 +52,6 @@ class ProbabilitiesMapping(BrainModel):
         self.identifier = identifier
         self.activations_model = activations_model
         self.layer = layer
-        # self.classifier = ProbabilitiesMapping.ProbabilitiesClassifier()
         self.classifier = TFProbabilitiesClassifier()
         self.current_task = None
 
@@ -64,7 +63,6 @@ class ProbabilitiesMapping(BrainModel):
         fitting_features = fitting_features.transpose('presentation', 'neuroid')
         assert all(fitting_features['image_id'].values == fitting_stimuli['image_id'].values), \
             "image_id ordering is incorrect"
-#        self.classifier.fit(fitting_features, fitting_stimuli['label'])
         self.classifier.fit(fitting_features, fitting_stimuli['image_label'])
 
     def look_at(self, stimuli):
