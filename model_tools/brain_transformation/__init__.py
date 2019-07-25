@@ -2,11 +2,12 @@ from brainscore.model_interface import BrainModel
 from model_tools.brain_transformation.temporal import TemporalIgnore
 from .behavior import BehaviorArbiter, LogitsBehavior, ProbabilitiesMapping
 from .neural import LayerMappedModel, LayerSelection, LayerScores
-from .stimuli import PixelsToDegrees
 
 
 class ModelCommitment(BrainModel):
-    def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None):
+    def __init__(self, identifier,
+                 activations_model, layers, behavioral_readout_layer=None,
+                 visual_degrees=10):
         self.layers = layers
         self.region_assemblies = {}
         layer_model = LayerMappedModel(identifier=identifier, activations_model=activations_model)
@@ -18,6 +19,11 @@ class ModelCommitment(BrainModel):
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
                                                BrainModel.Task.probabilities: probabilities_behavior})
         self.do_behavior = False
+
+        self._visual_degrees = visual_degrees
+
+    def visual_degrees(self) -> int:
+        return self._visual_degrees
 
     def start_task(self, task: BrainModel.Task, *args, **kwargs):
         if task != BrainModel.Task.passive:
