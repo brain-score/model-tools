@@ -20,7 +20,8 @@ class Defaults:
 
 
 class ActivationsExtractorHelper:
-    def __init__(self, get_activations, preprocessing, identifier=False, batch_size=Defaults.batch_size):
+    def __init__(self, get_activations, preprocessing, identifier=False,
+                 packaging=None, batch_size=Defaults.batch_size):
         """
         :param identifier: an activations identifier for the stored results file. False to disable saving.
         """
@@ -30,6 +31,7 @@ class ActivationsExtractorHelper:
         self.identifier = identifier
         self.get_activations = get_activations
         self.preprocess = preprocessing or (lambda x: x)
+        self.packaging = packaging or Packaging()
         self._stimulus_set_hooks = {}
         self._batch_activations_hooks = {}
 
@@ -76,7 +78,7 @@ class ActivationsExtractorHelper:
         self._logger.info('Running stimuli')
         layer_activations = self._get_activations_batched(stimuli_paths, layers=layers, batch_size=self._batch_size)
         self._logger.info('Packaging into assembly')
-        return self._package(layer_activations, stimuli_paths)
+        return self.packaging(self.identifier, layer_activations=layer_activations, stimuli_paths=stimuli_paths)
 
     def register_batch_activations_hook(self, hook):
         r"""
@@ -142,12 +144,24 @@ class ActivationsExtractorHelper:
     def _unpad(self, layer_activations, num_padding):
         return change_dict(layer_activations, lambda values: values[:-num_padding or None])
 
-    def _package(self, layer_activations, stimuli_paths):
+    def insert_attrs(self, wrapper):
+        wrapper.from_stimulus_set = self.from_stimulus_set
+        wrapper.from_paths = self.from_paths
+        wrapper.register_batch_activations_hook = self.register_batch_activations_hook
+        wrapper.register_stimulus_set_hook = self.register_stimulus_set_hook
+
+
+class Packaging:
+    def __init__(self):
+        self._logger = logging.getLogger(fullname(self))
+
+    def __call__(self, identifier, layer_activations, stimuli_paths):
         shapes = [a.shape for a in layer_activations.values()]
         self._logger.debug('Activations shapes: {}'.format(shapes))
         self._logger.debug("Packaging individual layers")
-        layer_assemblies = [self._package_layer(single_layer_activations, layer=layer, stimuli_paths=stimuli_paths) for
-                            layer, single_layer_activations in tqdm(layer_activations.items(), desc='layer packaging')]
+        layer_assemblies = [
+            self._package_layer(identifier, single_layer_activations, layer=layer, stimuli_paths=stimuli_paths)
+            for layer, single_layer_activations in tqdm(layer_activations.items(), desc='layer packaging')]
         # merge manually instead of using merge_data_arrays since `xarray.merge` is very slow with these large arrays
         self._logger.debug("Merging layer assemblies")
         model_assembly = np.concatenate([a.values for a in layer_assemblies],
@@ -169,7 +183,7 @@ class ActivationsExtractorHelper:
                                                    dims=layer_assemblies[0].dims)
         return model_assembly
 
-    def _package_layer(self, layer_activations, layer, stimuli_paths):
+    def _package_layer(self, identifier, layer_activations, layer, stimuli_paths):
         assert layer_activations.shape[0] == len(stimuli_paths)
         activations, flatten_indices = flatten(layer_activations, return_index=True)  # collapse for single neuroid dim
         assert flatten_indices.shape[1] in [1, 3]  # either convolutional or fully-connected
@@ -181,7 +195,7 @@ class ActivationsExtractorHelper:
             activations,
             coords={**{'stimulus_path': stimuli_paths,
                        'neuroid_num': ('neuroid', list(range(activations.shape[1]))),
-                       'model': ('neuroid', [self.identifier] * activations.shape[1]),
+                       'model': ('neuroid', [identifier] * activations.shape[1]),
                        'layer': ('neuroid', [layer] * activations.shape[1]),
                        },
                     **{coord: ('neuroid', values) for coord, values in flatten_coords.items()}},
@@ -191,12 +205,6 @@ class ActivationsExtractorHelper:
             layer_assembly[coord].values for coord in ['model', 'layer', 'neuroid_num']])]
         layer_assembly['neuroid_id'] = 'neuroid', neuroid_id
         return layer_assembly
-
-    def insert_attrs(self, wrapper):
-        wrapper.from_stimulus_set = self.from_stimulus_set
-        wrapper.from_paths = self.from_paths
-        wrapper.register_batch_activations_hook = self.register_batch_activations_hook
-        wrapper.register_stimulus_set_hook = self.register_stimulus_set_hook
 
 
 def change_dict(d, change_function, keep_name=False, multithread=False):
