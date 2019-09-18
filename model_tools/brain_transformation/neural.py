@@ -3,7 +3,7 @@ from collections import Iterable
 
 import numpy as np
 from tqdm import tqdm
-from typing import Optional, Union
+from typing import Optional, Union, List, Tuple
 
 from brainscore.assemblies import average_repetition
 from brainscore.benchmarks import BenchmarkBase, ceil_score
@@ -39,11 +39,11 @@ class LayerMappedModel(BrainModel):
         activations['region'] = 'neuroid', [layer_regions[layer] for layer in activations['layer'].values]
         return activations
 
-    def start_task(self, task):
+    def start_task(self, task, **kwargs):
         if task != BrainModel.Task.passive:
             raise NotImplementedError()
 
-    def start_recording(self, recording_target: BrainModel.RecordingTarget):
+    def start_recording(self, recording_target: BrainModel.RecordingTarget, time_bins=List[Tuple[int]]):
         if str(recording_target) not in self.region_layer_map:
             raise NotImplementedError(f"Region {recording_target} is not committed")
         self.recorded_regions = [recording_target]
