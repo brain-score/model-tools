@@ -5,7 +5,7 @@ import numpy as np
 from model_tools.activations import PytorchWrapper, KerasWrapper, TensorflowSlimWrapper
 
 
-def pytorch_custom():
+def pytorch_custom(kernel_size=3, image_size=224):
     import torch
     from torch import nn
     from model_tools.activations.pytorch import load_preprocess_images
@@ -13,9 +13,9 @@ def pytorch_custom():
     class MyModel(nn.Module):
         def __init__(self):
             super(MyModel, self).__init__()
-            self.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=2, kernel_size=3)
+            self.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=2, kernel_size=kernel_size)
             self.relu1 = torch.nn.ReLU()
-            linear_input_size = np.power((224 - 3 + 2 * 0) / 1 + 1, 2) * 2
+            linear_input_size = np.power((image_size - kernel_size + 2 * 0) / 1 + 1, 2) * 2
             self.linear = torch.nn.Linear(int(linear_input_size), 1000)
             self.relu2 = torch.nn.ReLU()  # can't get named ReLU output otherwise
 
@@ -27,7 +27,7 @@ def pytorch_custom():
             x = self.relu2(x)
             return x
 
-    preprocessing = functools.partial(load_preprocess_images, image_size=224)
+    preprocessing = functools.partial(load_preprocess_images, image_size=image_size)
     return PytorchWrapper(model=MyModel(), preprocessing=preprocessing)
 
 
