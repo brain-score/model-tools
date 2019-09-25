@@ -9,6 +9,7 @@ class ModelCommitment(BrainModel):
     def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None):
         self.layers = layers
         self.region_assemblies = {}
+        self._activations_model = activations_model
         layer_model = LayerMappedModel(identifier=identifier, activations_model=activations_model)
         self.layer_model = TemporalIgnore(layer_model)
         logits_behavior = LogitsBehavior(identifier=identifier, activations_model=activations_model)
@@ -44,6 +45,14 @@ class ModelCommitment(BrainModel):
         if recording_target not in self.layer_model.region_layer_map:  # not yet committed
             self.do_commit_region(recording_target)
         return self.layer_model.start_recording(recording_target, time_bins)
+
+    @property
+    def synapses(self):
+        return self._activations_model.weights
+
+    @property
+    def neurons(self):
+        return self._activations_model.units
 
     @property
     def identifier(self):

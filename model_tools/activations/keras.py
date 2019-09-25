@@ -1,8 +1,10 @@
 from collections import OrderedDict
+from pathlib import Path
 
 import numpy as np
+from xarray import DataArray
 
-from model_tools.activations.core import ActivationsExtractorHelper
+from model_tools.activations.core import ActivationsExtractorHelper, collapse_weights, merge_weight_assemblies
 
 
 class KerasWrapper:
@@ -44,6 +46,46 @@ class KerasWrapper:
 
     def __repr__(self):
         return repr(self._model)
+
+    @property
+    def weights(self):
+        weights_biases = OrderedDict((layer.name, layer.get_weights()) for layer in self._model.layers)
+        weights = []
+        for layer, weight_bias in weights_biases.items():
+            if not weight_bias:
+                continue
+            for weight_type, values in zip(["weight", "bias"], weight_bias):
+                # reshape into expected (outputs, [inputs, [conv_w, conv_h]])
+                if len(values.shape) == 1:  # bias
+                    pass
+                elif len(values.shape) == 2:  # dense
+                    # dense: input, outputs
+                    # https://github.com/keras-team/keras/blob/04cbccc8038c105374eef6eb2ce96d6746999860/keras/layers/core.py#L891
+                    values = values.transpose(1, 0)
+                elif len(values.shape) == 4:  # convolutional
+                    # kernel_shape = kernel_size + (input_dim, filters), i.e. 3, 3, 3, 64 = 3x3 convs, RGB, 64 outputs
+                    # https://github.com/keras-team/keras/blob/04cbccc8038c105374eef6eb2ce96d6746999860/keras/layers/convolutional.py#L135
+                    values = values.transpose(3, 2, 0, 1)
+                else:
+                    raise ValueError(f"Unknown weight shape {values.shape}")
+                values, flatten_coords = collapse_weights(values)
+                parameter_weights = DataArray(values, coords={
+                    **{'layer': ('weights', [layer] * len(values)),
+                       'type': ('weights', [weight_type] * len(values)),
+                       },
+                    **{coord: ('weights', coord_values) for coord, coord_values in flatten_coords.items()},
+                }, dims=['weights'])
+                weights.append(parameter_weights)
+        weights = merge_weight_assemblies(weights)
+        return weights
+
+    @property
+    def units(self):
+        weight_layers = [layer.name for layer in self._model.layers if layer.get_weights()]
+        # run dummy image
+        image_filepath = Path(__file__).parent / 'dummy.jpg'
+        activations = self.from_paths([image_filepath], layers=weight_layers)
+        return DataArray(activations['neuroid'])
 
     def graph(self):
         import networkx as nx

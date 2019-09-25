@@ -171,12 +171,7 @@ class ActivationsExtractorHelper:
 
     def _package_layer(self, layer_activations, layer, stimuli_paths):
         assert layer_activations.shape[0] == len(stimuli_paths)
-        activations, flatten_indices = flatten(layer_activations, return_index=True)  # collapse for single neuroid dim
-        assert flatten_indices.shape[1] in [1, 3]  # either convolutional or fully-connected
-        flatten_coord_names = ['channel', 'channel_x', 'channel_y']
-        flatten_coords = {flatten_coord_names[i]: [sample_index[i] if i < flatten_indices.shape[1] else np.nan
-                                                   for sample_index in flatten_indices]
-                          for i in range(len(flatten_coord_names))}
+        activations, flatten_coords = collapse_activations(layer_activations)
         layer_assembly = NeuroidAssembly(
             activations,
             coords={**{'stimulus_path': stimuli_paths,
@@ -197,6 +192,59 @@ class ActivationsExtractorHelper:
         wrapper.from_paths = self.from_paths
         wrapper.register_batch_activations_hook = self.register_batch_activations_hook
         wrapper.register_stimulus_set_hook = self.register_stimulus_set_hook
+
+
+def collapse_activations(multi_channel_activations):
+    activations, flatten_indices = flatten(multi_channel_activations,
+                                           return_index=True)  # collapse for single neuroid dim
+    assert flatten_indices.shape[1] in [1, 3]  # either convolutional or fully-connected
+    flatten_coord_names = ['channel', 'channel_x', 'channel_y']
+    flatten_coords = {flatten_coord_names[i]: [sample_index[i] if i < flatten_indices.shape[1] else np.nan
+                                               for sample_index in flatten_indices]
+                      for i in range(len(flatten_coord_names))}
+    return activations, flatten_coords
+
+
+def collapse_weights(multi_channel_weights):
+    """
+    :param multi_channel_weights: weights with multiple channels, as numpy array.
+        The 0-th channel should be outputs, the 1st channel should be inputs.
+        Bias weights will only have an outputs component.
+        For convolutional weights, channels 2 and 3 should be kernel_x and kernel_y respectively.
+    :return:
+    """
+    weights, flatten_indices = flatten(multi_channel_weights, return_index=True, batched=False)
+    if flatten_indices.shape[1] == 1:  # bias
+        flatten_coord_names = ['channel_out']
+    elif flatten_indices.shape[1] == 2:  # fully-connected
+        flatten_coord_names = ['channel_out', 'channel_in']
+    elif flatten_indices.shape[1] == 4:  # convolutional
+        flatten_coord_names = ['channel_out', 'channel_in', 'kernel_x', 'kernel_y']
+    else:
+        raise ValueError(f"Unknown indices shape {flatten_indices.shape[1]}")
+    flatten_coords = {flatten_coord_names[i]: flatten_indices[:, i] for i in range(len(flatten_coord_names))}
+    return weights, flatten_coords
+
+
+def merge_weight_assemblies(weight_assemblies):
+    # merge manually instead of using merge_data_arrays since `xarray.merge` is very slow with these large arrays
+    # dealing with only one dimension makes things a little easier, but we need to make sure we have all coords
+    weights_assembly = np.concatenate([a.values for a in weight_assemblies])
+    coords = set([(coord, dims) for weight_assembly in weight_assemblies
+                  for coord, dims, values in walk_coords(weight_assembly)])
+    coords = {coord: [dims, []] for coord, dims in coords}
+    for weight_assembly in weight_assemblies:
+        for coord in coords:
+            if hasattr(weight_assembly, coord):
+                assembly_coord_values = weight_assembly[coord].values
+            else:
+                dim = coords[coord][0][0]
+                assembly_coord_values = [None] * len(weight_assembly[dim])
+            coords[coord][1] = np.concatenate((coords[coord][1], assembly_coord_values))
+    coords = {coord: (dims_values[0], dims_values[1])  # re-package as tuple instead of list for xarray
+              for coord, dims_values in coords.items()}
+    weights_assembly = type(weight_assemblies[0])(weights_assembly, coords=coords, dims=weight_assemblies[0].dims)
+    return weights_assembly
 
 
 def change_dict(d, change_function, keep_name=False, multithread=False):
@@ -263,8 +311,9 @@ class HookHandle:
         self._saved_hook = None
 
 
-def flatten(layer_output, return_index=False):
-    flattened = layer_output.reshape(layer_output.shape[0], -1)
+def flatten(layer_output, return_index=False, batched=True):
+    shape = (layer_output.shape[0], -1) if batched else (-1,)
+    flattened = layer_output.reshape(*shape)
     if not return_index:
         return flattened
 
@@ -283,5 +332,6 @@ def flatten(layer_output, return_index=False):
             start, end = end, end + rows
         return out.reshape(cols, rows).T
 
-    index = cartesian_product_broadcasted(*[np.arange(s, dtype='int') for s in layer_output.shape[1:]])
+    index = cartesian_product_broadcasted(*[np.arange(s, dtype='int')
+                                            for s in layer_output.shape[(1 if batched else 0):]])
     return flattened, index

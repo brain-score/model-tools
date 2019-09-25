@@ -1,10 +1,12 @@
 import logging
 from collections import OrderedDict
+from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from xarray import DataArray
 
-from model_tools.activations.core import ActivationsExtractorHelper
+from model_tools.activations.core import ActivationsExtractorHelper, collapse_weights, merge_weight_assemblies
 from model_tools.utils import fullname
 
 SUBMODULE_SEPARATOR = '.'
@@ -94,6 +96,46 @@ class PytorchWrapper:
             if len(list(module.children())) > 0:  # this module only holds other modules
                 continue
             yield name, module
+
+    _weight_types = ['weight', 'bias']
+
+    @property
+    def weights(self):
+        state_dict = self._model.state_dict()
+        # conv: out_channels, in_channels, *kernel_size
+        # (e.g. for 2, 3, 3, 3: 2 outputs, 3 RGB, 3x3 convolutions)
+        # (e.g. for 2, 3, 5, 5: 2 outputs, 3 RGB, 5x5 convolutions)
+        # bias: out_channels (2 for conv1)
+        weights = []
+        for name, tensor in state_dict.items():
+            values, flatten_coords = collapse_weights(tensor.numpy())
+            weight_type = [t for t in self._weight_types if name.endswith(f".{t}")][0]
+            layer = name.rstrip(f".{weight_type}")
+            parameter_weights = DataArray(values, coords={
+                **{'parameter': ('weights', [name] * len(values)),
+                   'type': ('weights', [weight_type] * len(values)),
+                   'layer': ('weights', [layer] * len(values)),
+                   },
+                **{coord: ('weights', coord_values) for coord, coord_values in flatten_coords.items()},
+            }, dims=['weights'])
+            weights.append(parameter_weights)
+        weights_assembly = merge_weight_assemblies(weights)
+        return weights_assembly
+
+    @property
+    def units(self):
+        # count only units in layers with weights
+        parameters = list(self._model.state_dict().keys())
+        weight_layers = []
+        for param in parameters:
+            for _rstrip in self._weight_types:
+                param = param.rstrip(f".{_rstrip}")
+            weight_layers.append(param)
+        weight_layers = set(weight_layers)
+        # run dummy image
+        image_filepath = Path(__file__).parent / 'dummy.jpg'
+        activations = self.from_paths([image_filepath], layers=weight_layers)
+        return DataArray(activations['neuroid'])
 
     def graph(self):
         import networkx as nx
