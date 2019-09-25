@@ -126,89 +126,88 @@ def tfslim_vgg16():
                                  endpoints=endpoints, inputs=placeholder, session=session)
 
 
-@pytest.mark.parametrize("image_name", ['rgb.jpg', 'grayscale.png', 'grayscale2.jpg', 'grayscale_alpha.png'])
-@pytest.mark.parametrize(["pca_components", "logits"], [(None, True), (None, False), (5, False)])
-@pytest.mark.parametrize(["model_ctr", "layers"], [
-    pytest.param(pytorch_custom, ['linear', 'relu2']),
-    pytest.param(pytorch_alexnet, ['features.12', 'classifier.5'], marks=pytest.mark.memory_intense),
-    pytest.param(keras_vgg19, ['block3_pool'], marks=pytest.mark.memory_intense),
-    pytest.param(tfslim_custom, ['my_model/pool2'], marks=pytest.mark.memory_intense),
-    pytest.param(tfslim_vgg16, ['vgg_16/pool5'], marks=pytest.mark.memory_intense),
-])
-def test_from_image_path(model_ctr, layers, image_name, pca_components, logits):
-    stimuli_paths = [os.path.join(os.path.dirname(__file__), image_name)]
+class TestActivations:
+    @pytest.mark.parametrize("image_name", ['rgb.jpg', 'grayscale.png', 'grayscale2.jpg', 'grayscale_alpha.png'])
+    @pytest.mark.parametrize(["pca_components", "logits"], [(None, True), (None, False), (5, False)])
+    @pytest.mark.parametrize(["model_ctr", "layers"], [
+        pytest.param(pytorch_custom, ['linear', 'relu2']),
+        pytest.param(pytorch_alexnet, ['features.12', 'classifier.5'], marks=pytest.mark.memory_intense),
+        pytest.param(keras_vgg19, ['block3_pool'], marks=pytest.mark.memory_intense),
+        pytest.param(tfslim_custom, ['my_model/pool2'], marks=pytest.mark.memory_intense),
+        pytest.param(tfslim_vgg16, ['vgg_16/pool5'], marks=pytest.mark.memory_intense),
+    ])
+    def test_from_image_path(self, model_ctr, layers, image_name, pca_components, logits):
+        stimuli_paths = [os.path.join(os.path.dirname(__file__), image_name)]
 
-    activations_extractor = model_ctr()
-    if pca_components:
-        LayerPCA.hook(activations_extractor, pca_components)
-    activations = activations_extractor.from_paths(stimuli_paths=stimuli_paths,
-                                                   layers=layers if not logits else None)
+        activations_extractor = model_ctr()
+        if pca_components:
+            LayerPCA.hook(activations_extractor, pca_components)
+        activations = activations_extractor.from_paths(stimuli_paths=stimuli_paths,
+                                                       layers=layers if not logits else None)
 
-    assert activations is not None
-    assert len(activations['stimulus_path']) == 1
-    assert len(np.unique(activations['layer'])) == len(layers) if not logits else 1
-    if logits and not pca_components:
-        assert len(activations['neuroid']) == 1000
-    elif pca_components is not None:
-        assert len(activations['neuroid']) == pca_components * len(layers)
-    import gc
-    gc.collect()
-    return activations
+        assert activations is not None
+        assert len(activations['stimulus_path']) == 1
+        assert len(np.unique(activations['layer'])) == len(layers) if not logits else 1
+        if logits and not pca_components:
+            assert len(activations['neuroid']) == 1000
+        elif pca_components is not None:
+            assert len(activations['neuroid']) == pca_components * len(layers)
+        import gc
+        gc.collect()
+        return activations
 
+    @pytest.mark.parametrize("pca_components", [None, 5])
+    @pytest.mark.parametrize(["model_ctr", "layers"], [
+        pytest.param(pytorch_custom, ['linear', 'relu2']),
+        pytest.param(pytorch_alexnet, ['features.12', 'classifier.5'], marks=pytest.mark.memory_intense),
+        pytest.param(keras_vgg19, ['block3_pool'], marks=pytest.mark.memory_intense),
+        pytest.param(tfslim_custom, ['my_model/pool2'], marks=pytest.mark.memory_intense),
+        pytest.param(tfslim_vgg16, ['vgg_16/pool5'], marks=pytest.mark.memory_intense),
+    ])
+    def test_from_stimulus_set(self, model_ctr, layers, pca_components):
+        image_names = ['rgb.jpg', 'grayscale.png', 'grayscale2.jpg', 'grayscale_alpha.png']
+        stimulus_set = StimulusSet([{'image_id': image_name, 'some_meta': image_name[::-1]}
+                                    for image_name in image_names])
+        stimulus_set.image_paths = {image_name: os.path.join(os.path.dirname(__file__), image_name)
+                                    for image_name in image_names}
 
-@pytest.mark.parametrize("pca_components", [None, 5])
-@pytest.mark.parametrize(["model_ctr", "layers"], [
-    pytest.param(pytorch_custom, ['linear', 'relu2']),
-    pytest.param(pytorch_alexnet, ['features.12', 'classifier.5'], marks=pytest.mark.memory_intense),
-    pytest.param(keras_vgg19, ['block3_pool'], marks=pytest.mark.memory_intense),
-    pytest.param(tfslim_custom, ['my_model/pool2'], marks=pytest.mark.memory_intense),
-    pytest.param(tfslim_vgg16, ['vgg_16/pool5'], marks=pytest.mark.memory_intense),
-])
-def test_from_stimulus_set(model_ctr, layers, pca_components):
-    image_names = ['rgb.jpg', 'grayscale.png', 'grayscale2.jpg', 'grayscale_alpha.png']
-    stimulus_set = StimulusSet([{'image_id': image_name, 'some_meta': image_name[::-1]}
-                                for image_name in image_names])
-    stimulus_set.image_paths = {image_name: os.path.join(os.path.dirname(__file__), image_name)
-                                for image_name in image_names}
+        activations_extractor = model_ctr()
+        if pca_components:
+            LayerPCA.hook(activations_extractor, pca_components)
+        activations = activations_extractor.from_stimulus_set(stimulus_set, layers=layers, stimuli_identifier=False)
 
-    activations_extractor = model_ctr()
-    if pca_components:
-        LayerPCA.hook(activations_extractor, pca_components)
-    activations = activations_extractor.from_stimulus_set(stimulus_set, layers=layers, stimuli_identifier=False)
+        assert activations is not None
+        assert set(activations['image_id'].values) == set(image_names)
+        assert all(activations['some_meta'].values == [image_name[::-1] for image_name in image_names])
+        assert len(np.unique(activations['layer'])) == len(layers)
+        if pca_components is not None:
+            assert len(activations['neuroid']) == pca_components * len(layers)
 
-    assert activations is not None
-    assert set(activations['image_id'].values) == set(image_names)
-    assert all(activations['some_meta'].values == [image_name[::-1] for image_name in image_names])
-    assert len(np.unique(activations['layer'])) == len(layers)
-    if pca_components is not None:
-        assert len(activations['neuroid']) == pca_components * len(layers)
+    @pytest.mark.memory_intense
+    @pytest.mark.parametrize("pca_components", [None, 1000])
+    def test_exact_activations(self, pca_components):
+        activations = self.test_from_image_path(
+            model_ctr=pytorch_alexnet_resize, layers=['features.12', 'classifier.5'],
+            image_name='rgb.jpg', pca_components=pca_components, logits=False)
+        with open(os.path.join(os.path.dirname(__file__), f'alexnet-rgb-{pca_components}.pkl'), 'rb') as f:
+            target = pickle.load(f)['activations']
+        assert (activations == target).all()
 
+    @pytest.mark.memory_intense
+    @pytest.mark.parametrize(["model_ctr", "internal_layers"], [
+        (pytorch_alexnet, ['features.12', 'classifier.5']),
+        (keras_vgg19, ['block3_pool']),
+        (tfslim_vgg16, ['vgg_16/pool5']),
+    ])
+    def test_mixed_layer_logits(self, model_ctr, internal_layers):
+        stimuli_paths = [os.path.join(os.path.dirname(__file__), 'rgb.jpg')]
 
-@pytest.mark.memory_intense
-@pytest.mark.parametrize("pca_components", [None, 1000])
-def test_exact_activations(pca_components):
-    activations = test_from_image_path(model_ctr=pytorch_alexnet_resize, layers=['features.12', 'classifier.5'],
-                                       image_name='rgb.jpg', pca_components=pca_components, logits=False)
-    with open(os.path.join(os.path.dirname(__file__), f'alexnet-rgb-{pca_components}.pkl'), 'rb') as f:
-        target = pickle.load(f)['activations']
-    assert (activations == target).all()
-
-
-@pytest.mark.memory_intense
-@pytest.mark.parametrize(["model_ctr", "internal_layers"], [
-    (pytorch_alexnet, ['features.12', 'classifier.5']),
-    (keras_vgg19, ['block3_pool']),
-    (tfslim_vgg16, ['vgg_16/pool5']),
-])
-def test_mixed_layer_logits(model_ctr, internal_layers):
-    stimuli_paths = [os.path.join(os.path.dirname(__file__), 'rgb.jpg')]
-
-    activations_extractor = model_ctr()
-    layers = internal_layers + ['logits']
-    activations = activations_extractor(stimuli=stimuli_paths, layers=layers)
-    assert len(np.unique(activations['layer'])) == len(internal_layers) + 1
-    assert set(activations['layer'].values) == set(layers)
-    assert unique_preserved_order(activations['layer'])[-1] == 'logits'
+        activations_extractor = model_ctr()
+        layers = internal_layers + ['logits']
+        activations = activations_extractor(stimuli=stimuli_paths, layers=layers)
+        assert len(np.unique(activations['layer'])) == len(internal_layers) + 1
+        assert set(activations['layer'].values) == set(layers)
+        assert unique_preserved_order(activations['layer'])[-1] == 'logits'
 
 
 @pytest.mark.memory_intense
@@ -222,19 +221,19 @@ def test_infer_identifier(model_ctr, expected_identifier):
     assert model.identifier == expected_identifier
 
 
-def test_convolution_meta():
-    model = pytorch_custom()
-    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['conv1'])
-    assert hasattr(activations, 'channel')
-    assert hasattr(activations, 'channel_x')
-    assert hasattr(activations, 'channel_y')
-    assert len(set(activations['neuroid_id'].values)) == len(activations['neuroid'])
+class TestChannels:
+    def test_convolution_meta(self):
+        model = pytorch_custom()
+        activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['conv1'])
+        assert hasattr(activations, 'channel')
+        assert hasattr(activations, 'channel_x')
+        assert hasattr(activations, 'channel_y')
+        assert len(set(activations['neuroid_id'].values)) == len(activations['neuroid'])
 
-
-def test_conv_and_fc():
-    model = pytorch_custom()
-    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['conv1', 'linear'])
-    assert set(activations['layer'].values) == {'conv1', 'linear'}
+    def test_conv_and_fc(self):
+        model = pytorch_custom()
+        activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['conv1', 'linear'])
+        assert set(activations['layer'].values) == {'conv1', 'linear'}
 
 
 @pytest.mark.timeout(300)
