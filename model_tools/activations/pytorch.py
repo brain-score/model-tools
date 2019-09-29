@@ -108,7 +108,7 @@ class PytorchWrapper:
         # bias: out_channels (2 for conv1)
         weights = []
         for name, tensor in state_dict.items():
-            values, flatten_coords = collapse_weights(tensor.numpy())
+            values, flatten_coords = collapse_weights(self._tensor_to_numpy(tensor))
             weight_type = [t for t in self._weight_types if name.endswith(f".{t}")][0]
             layer = name.rstrip(f".{weight_type}")
             parameter_weights = DataArray(values, coords={
