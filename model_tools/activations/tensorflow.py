@@ -1,3 +1,4 @@
+import logging
 from collections import OrderedDict
 from pathlib import Path
 
@@ -5,6 +6,8 @@ import numpy as np
 from xarray import DataArray
 
 from model_tools.activations.core import ActivationsExtractorHelper, collapse_weights, merge_weight_assemblies
+
+_logger = logging.getLogger(__name__)
 
 
 class TensorflowWrapper:
@@ -122,8 +125,17 @@ class TensorflowWrapper:
 
     @property
     def units(self):
-        weight_layers = [layer_name for layer_name, layer_output, layer_trainables in self._list_layers()
-                               if sum(np.prod(var.shape) for var in layer_trainables) > 0]
+        weight_tensors = {layer_name: layer_output.name
+                          for layer_name, layer_output, layer_trainables in self._list_layers()
+                          if sum(np.prod(var.shape) for var in layer_trainables) > 0}
+        tensor_layers = {tensor.name: layer for layer, tensor in self._endpoints.items()}
+        weight_layers = []
+        for tensor_name in weight_tensors.values():
+            if tensor_name not in tensor_layers:
+                _logger.warning(f"{tensor_name} not found in endpoints")
+                continue
+            layer = tensor_layers[tensor_name]
+            weight_layers.append(layer)
         # run dummy image
         image_filepath = Path(__file__).parent / 'dummy.jpg'
         activations = self.from_paths([str(image_filepath)], layers=weight_layers)
