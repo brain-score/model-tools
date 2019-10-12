@@ -16,11 +16,15 @@ class VisualSearchObjArray(BrainModel):
         self.target_model_winsize = target_model_winsize
         self.stimulus_model = stimulus_model
         self.stimulus_layer = stimulus_layer
+        self.current_task = None
         self.eye_res = 224
         self.arr_size = 6
         self.data_len = 300
 
-    def start_task(self, stimuli_set):
+    def start_task(self, task: BrainModel.Task):
+        self.current_task = task
+
+    def look_at(self, stimuli_set):
         self.gt_array = []
         gt = stimuli_set[stimuli_set['image_label'] == 'gt']
         gt_paths = list(gt.image_paths.values())[int(gt.index.values[0]):int(gt.index.values[-1]+1)]
@@ -42,7 +46,6 @@ class VisualSearchObjArray(BrainModel):
         for i in range(1,6):
             self.gt_total += self.gt_array[i]
 
-    def look_at(self, stimuli_set):
         self.score = np.zeros((self.data_len, self.arr_size+1))
         self.data = np.zeros((self.data_len, self.arr_size+1, 2), dtype=int)
         data_cnt = 0
@@ -106,13 +109,7 @@ class VisualSearchObjArray(BrainModel):
             self.data[i, :j, 0] = saccade[:, 0].reshape((-1,))
             self.data[i, :j, 1] = saccade[:, 1].reshape((-1,))
 
-        assembly = BehavioralAssembly(data,
-                                    coords={'image_id': [*range(1, 301)],
-                                            'fixation': [*range(7)],
-                                            'position': ['x', 'y']},
-                                    dims=['presentation', 'fixation', 'position'])
-
-        return (self.score, assembly)
+        return (self.score, data)
 
     def remove_attn(self, img, x, y):
         t = -1
