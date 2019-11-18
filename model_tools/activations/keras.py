@@ -4,6 +4,7 @@ import numpy as np
 
 from model_tools.activations.core import ActivationsExtractorHelper
 
+import tensorflow as tf
 
 class KerasWrapper:
     def __init__(self, model, preprocessing, identifier=None, *args, **kwargs):
@@ -18,6 +19,9 @@ class KerasWrapper:
             *args, **kwargs)
         self._extractor.insert_attrs(self)
 
+    def __call__(self, *args, **kwargs):  # cannot assign __call__ as attribute due to Python convention
+        return self._extractor(*args, **kwargs)
+
     @property
     def identifier(self):
         return self._extractor.identifier
@@ -26,20 +30,27 @@ class KerasWrapper:
     def identifier(self, value):
         self._extractor.identifier = value
 
-    def __call__(self, *args, **kwargs):  # cannot assign __call__ as attribute due to Python convention
-        return self._extractor(*args, **kwargs)
-
     def get_activations(self, images, layer_names):
-        from keras import backend as K
+
+        """
+        param images: a list of image paths
+        param layer_names: a list of layer names
+        """
+        from tensorflow.keras import backend as K
+        print(images.shape)
+
         input_tensor = self._model.input
         layers = [layer for layer in self._model.layers if layer.name in layer_names]
         layers = sorted(layers, key=lambda layer: layer_names.index(layer.name))
+
         if 'logits' in layer_names:
             layers.insert(layer_names.index('logits'), self._model.layers[-1])
+
         assert len(layers) == len(layer_names)
         layer_out_tensors = [layer.output for layer in layers]
-        functor = K.function([input_tensor] + [K.learning_phase()], layer_out_tensors)  # evaluate all tensors at once
-        layer_outputs = functor([images, 0.])  # 0 to signal testing phase
+        functor = K.function([input_tensor], layer_out_tensors)  # evaluate all tensors at once
+        K.set_learning_phase(0)  # 0 to signal testing phase
+        layer_outputs = functor([images])
         return OrderedDict([(layer_name, layer_output) for layer_name, layer_output in zip(layer_names, layer_outputs)])
 
     def __repr__(self):
@@ -62,7 +73,7 @@ def load_images(image_filepaths, image_size):
 
 
 def load_image(image_filepath):
-    from keras.preprocessing import image
+    from tensorflow.keras.preprocessing import image
     img = image.load_img(image_filepath)
     x = image.img_to_array(img)
     return x
@@ -70,7 +81,7 @@ def load_image(image_filepath):
 
 def scale_image(img, image_size):
     from PIL import Image
-    from keras.preprocessing import image
+    from tensorflow.keras.preprocessing import image
     img = Image.fromarray(img.astype(np.uint8))
     img = img.resize((image_size, image_size))
     img = image.img_to_array(img)
@@ -79,6 +90,6 @@ def scale_image(img, image_size):
 
 def preprocess(image_filepaths, image_size, *args, **kwargs):
     # only a wrapper to avoid top-level keras imports
-    from keras.applications.imagenet_utils import preprocess_input
+    from tensorflow.keras.applications.imagenet_utils import preprocess_input
     images = load_images(image_filepaths, image_size=image_size)
     return preprocess_input(images, *args, **kwargs)
