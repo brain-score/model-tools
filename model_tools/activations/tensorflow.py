@@ -54,7 +54,7 @@ class TensorflowSlimWrapper(TensorflowWrapper):
 
 def load_image(image_filepath):
     import tensorflow as tf
-    image = tf.io.read_file(image_filepath)
+    image = tf.read_file(image_filepath)
     image = tf.image.decode_png(image, channels=3)
     return image
 
