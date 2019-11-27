@@ -21,7 +21,7 @@ class TemporalIgnore(BrainModel):
         self._time_bins = None
 
     def start_recording(self, recording_target: BrainModel.RecordingTarget, time_bins=List[Tuple[int]]):
-        self._layer_model.start_recording(recording_target, time_bins=time_bins)
+        self._layer_model.start_recording(recording_target)
         self._time_bins = time_bins
 
     def look_at(self, stimuli):
