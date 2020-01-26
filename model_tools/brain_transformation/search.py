@@ -41,7 +41,6 @@ class VisualSearchObjArray(BrainModel):
 
     def start_task(self, task: BrainModel.Task):
         self.current_task = task
-        print(task, "started")
 
     def look_at(self, stimuli_set):
         self.gt_array = []
@@ -82,11 +81,9 @@ class VisualSearchObjArray(BrainModel):
         if stimuli_features.shape[0] == stimuli_features['neuroid_num'].shape[0]:
             stimuli_features = stimuli_features.T
 
-        print(stimuli_features.shape, self.stimuli_layer, target_features.shape, self.target_layer)
-
         import torch
 
-        for i in tqdm(range(self.data_len)):
+        for i in tqdm(range(self.data_len), desc="visual search stimuli: "):
             op_target = self.unflat(target_features[i:i+1])
             MMconv = torch.nn.Conv2d(op_target.shape[1], 1, kernel_size=op_target.shape[2], stride=1, bias=False)
             MMconv.weight = torch.nn.Parameter(torch.Tensor(op_target))
