@@ -198,6 +198,10 @@ class ActivationsExtractorHelper:
         wrapper.register_batch_activations_hook = self.register_batch_activations_hook
         wrapper.register_stimulus_set_hook = self.register_stimulus_set_hook
 
+    def unhook(self):
+        self._stimulus_set_hooks = {}
+        self._batch_activations_hooks = {}
+
 
 def change_dict(d, change_function, keep_name=False, multithread=False):
     if not multithread:

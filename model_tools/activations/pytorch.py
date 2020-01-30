@@ -86,6 +86,9 @@ class PytorchWrapper:
         hook = layer.register_forward_hook(hook_function)
         return hook
 
+    def unregister_hooks(self):
+        self._extractor.unhook()
+
     def __repr__(self):
         return repr(self._model)
 

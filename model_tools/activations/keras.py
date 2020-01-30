@@ -42,6 +42,8 @@ class KerasWrapper:
         layer_outputs = functor([images, 0.])  # 0 to signal testing phase
         return OrderedDict([(layer_name, layer_output) for layer_name, layer_output in zip(layer_names, layer_outputs)])
 
+    def unregister_hooks(self):
+        self._extractor.unhook()
     def __repr__(self):
         return repr(self._model)
 
