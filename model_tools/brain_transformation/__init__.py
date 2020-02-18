@@ -21,7 +21,7 @@ class ModelCommitment(BrainModel):
         'IT': LazyLoad(MajajITPublicBenchmark),
     }
 
-    def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None, search_target_layer=None, search_stimulus_layer=None):
+    def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None, search_target_model_param=None, search_stimuli_model_param=None):
         self.layers = layers
         self.region_benchmarks = {**self.standard_region_benchmarks, **(region_benchmarks or {})}
         layer_model = LayerMappedModel(identifier=identifier, activations_model=activations_model)
@@ -34,13 +34,13 @@ class ModelCommitment(BrainModel):
                                                BrainModel.Task.probabilities: probabilities_behavior})
         self.do_behavior = False
 
-        self.search_model = VisualSearchObjArray(identifier=identifier, target_layer=search_target_layer, stimulus_layer=search_stimulus_layer)
+        self.search_model = VisualSearchObjArray(identifier=identifier, target_model_param=search_target_model_param, stimuli_model_param=search_stimuli_model_param)
         self.do_search = False
 
     def start_task(self, task: BrainModel.Task, *args, **kwargs):
         if task != BrainModel.Task.passive:
-            if task == BrainModel.Task.visual_search:
-                self.search_model.start_task(task)
+            if task == BrainModel.Task.visual_search_obj_arr:
+                self.search_model.start_task(task, **kwargs)
                 self.do_behavior = False
                 self.do_search = True
             else:

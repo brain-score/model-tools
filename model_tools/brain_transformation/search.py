@@ -3,43 +3,28 @@ from collections import OrderedDict
 
 from brainio_base.assemblies import BehavioralAssembly
 from brainscore.model_interface import BrainModel
-from candidate_models.base_models import BaseModelPool
-from candidate_models.model_commitments.vs_layer import visual_search_layer
+from brainscore.utils import fullname
 
 import cv2
 import numpy as np
 from tqdm import tqdm
+import logging
 
 class VisualSearchObjArray(BrainModel):
-    def __init__(self, identifier, target_layer, stimulus_layer):
+    def __init__(self, identifier, target_model_param, stimuli_model_param):
         self.current_task = None
-        self.eye_res = 224
-        self.arr_size = 6
-        self.data_len = 300
         self.identifier = identifier
+        self.target_model = target_model_param['target_model']
+        self.stimuli_model = stimuli_model_param['stimuli_model']
+        self.target_layer = target_model_param['target_layer']
+        self.stimuli_layer = stimuli_model_param['stimuli_layer']
+        self.search_image_size = stimuli_model_param['search_image_size']
+        self._logger = logging.getLogger(fullname(self))
 
-        self.fix = [[640, 512],
-                     [365, 988],
-                     [90, 512],
-                     [365, 36],
-                     [915, 36],
-                     [1190, 512],
-                     [915, 988]]
-
-        target_model_pool = BaseModelPool(input_size=28)
-        stimulus_model_pool = BaseModelPool(input_size=224)
-        self.target_model = target_model_pool[identifier]
-        self.stimuli_model = stimulus_model_pool[identifier]
-
-        if target_layer==None:
-            self.target_layer = visual_search_layer[identifier][0]
-            self.stimuli_layer = visual_search_layer[identifier][0]
-        else:
-            self.target_layer = target_layer
-            self.stimuli_layer = stimulus_layer
-
-
-    def start_task(self, task: BrainModel.Task):
+    def start_task(self, task: BrainModel.Task, **kwargs):
+        self.fix = kwargs['fix'] # fixation map
+        self.max_fix = kwargs['max_fix'] # maximum allowed fixation excluding the very first fixation
+        self.data_len = kwargs['data_len'] # Number of stimuli
         self.current_task = task
 
     def look_at(self, stimuli_set):
@@ -51,10 +36,10 @@ class VisualSearchObjArray(BrainModel):
             imagename_gt = gt_paths[i]
 
             gt = cv2.imread(imagename_gt, 0)
-            gt = cv2.resize(gt, (self.eye_res, self.eye_res), interpolation = cv2.INTER_AREA)
+            gt = cv2.resize(gt, (self.search_image_size, self.search_image_size), interpolation = cv2.INTER_AREA)
             retval, gt = cv2.threshold(gt, 125, 255, cv2.THRESH_BINARY)
-            temp_stim = np.uint8(np.zeros((3*self.eye_res, 3*self.eye_res)))
-            temp_stim[self.eye_res:2*self.eye_res, self.eye_res:2*self.eye_res] = np.copy(gt)
+            temp_stim = np.uint8(np.zeros((3*self.search_image_size, 3*self.search_image_size)))
+            temp_stim[self.search_image_size:2*self.search_image_size, self.search_image_size:2*self.search_image_size] = np.copy(gt)
             gt = np.copy(temp_stim)
             gt = gt/255
 
@@ -64,8 +49,8 @@ class VisualSearchObjArray(BrainModel):
         for i in range(1,6):
             self.gt_total += self.gt_array[i]
 
-        self.score = np.zeros((self.data_len, self.arr_size+1))
-        self.data = np.zeros((self.data_len, self.arr_size+2, 2), dtype=int)
+        self.score = np.zeros((self.data_len, self.max_fix+1))
+        self.data = np.zeros((self.data_len, self.max_fix+2, 2), dtype=int)
         S_data = np.zeros((300, 7, 2), dtype=int)
         I_data = np.zeros((300, 1), dtype=int)
 
@@ -85,7 +70,7 @@ class VisualSearchObjArray(BrainModel):
 
         for i in tqdm(range(self.data_len), desc="visual search stimuli: "):
             op_target = self.unflat(target_features[i:i+1])
-            MMconv = torch.nn.Conv2d(op_target.shape[1], 1, kernel_size=op_target.shape[2], stride=1, bias=False)
+            MMconv = torch.nn.Conv2d(op_target.shape[1], 1, kernel_size=(op_target.shape[2], op_target.shape[3]), stride=1, bias=False)
             MMconv.weight = torch.nn.Parameter(torch.Tensor(op_target))
 
             gt_idx = target_features.tar_obj_pos.values[i]
@@ -99,24 +84,24 @@ class VisualSearchObjArray(BrainModel):
             out = out/np.max(out)
             out *= 255
             out = np.uint8(out)
-            out = cv2.resize(out, (self.eye_res, self.eye_res), interpolation = cv2.INTER_AREA)
+            out = cv2.resize(out, (self.search_image_size, self.search_image_size), interpolation = cv2.INTER_AREA)
             out = cv2.GaussianBlur(out,(7,7),3)
 
-            temp_stim = np.uint8(np.zeros((3*self.eye_res, 3*self.eye_res)))
-            temp_stim[self.eye_res:2*self.eye_res, self.eye_res:2*self.eye_res] = np.copy(out)
+            temp_stim = np.uint8(np.zeros((3*self.search_image_size, 3*self.search_image_size)))
+            temp_stim[self.search_image_size:2*self.search_image_size, self.search_image_size:2*self.search_image_size] = np.copy(out)
             attn = np.copy(temp_stim*self.gt_total)
 
             saccade = []
             (x, y) = int(attn.shape[0]/2), int(attn.shape[1]/2)
             saccade.append((x, y))
 
-            for k in range(self.arr_size):
+            for k in range(self.max_fix):
                 (x, y) = np.unravel_index(np.argmax(attn), attn.shape)
 
                 fxn_x, fxn_y = x, y
 
-                fxn_x, fxn_y = max(fxn_x, self.eye_res), max(fxn_y, self.eye_res)
-                fxn_x, fxn_y = min(fxn_x, (attn.shape[0]-self.eye_res)), min(fxn_y, (attn.shape[1]-self.eye_res))
+                fxn_x, fxn_y = max(fxn_x, self.search_image_size), max(fxn_y, self.search_image_size)
+                fxn_x, fxn_y = min(fxn_x, (attn.shape[0]-self.search_image_size)), min(fxn_y, (attn.shape[1]-self.search_image_size))
 
                 saccade.append((fxn_x, fxn_y))
 
