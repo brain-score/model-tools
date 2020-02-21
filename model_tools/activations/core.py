@@ -1,8 +1,7 @@
 import copy
-import os
-
 import functools
 import logging
+import os
 from collections import OrderedDict
 from multiprocessing.pool import ThreadPool
 
@@ -197,10 +196,6 @@ class ActivationsExtractorHelper:
         wrapper.from_paths = self.from_paths
         wrapper.register_batch_activations_hook = self.register_batch_activations_hook
         wrapper.register_stimulus_set_hook = self.register_stimulus_set_hook
-
-    def unhook(self):
-        self._stimulus_set_hooks = {}
-        self._batch_activations_hooks = {}
 
 
 def change_dict(d, change_function, keep_name=False, multithread=False):

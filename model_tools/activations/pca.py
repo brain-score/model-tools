@@ -75,10 +75,7 @@ class LayerPCA:
     @classmethod
     def hook(cls, activations_extractor, n_components):
         hook = LayerPCA(activations_extractor=activations_extractor, n_components=n_components)
-        hooks = activations_extractor._extractor._batch_activations_hooks
-        for key in list(hooks):
-            if isinstance(hooks[key], cls):
-                del hooks[key]
+        assert not cls.is_hooked(activations_extractor), "PCA already hooked"
         handle = activations_extractor.register_batch_activations_hook(hook)
         hook.handle = handle
         return handle

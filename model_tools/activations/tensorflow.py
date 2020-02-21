@@ -31,9 +31,6 @@ class TensorflowWrapper:
         layer_outputs = self._session.run(layer_tensors, feed_dict={self._inputs: images})
         return layer_outputs
 
-    def unregister_hooks(self):
-        self._extractor.unhook()
-
     def graph(self):
         import networkx as nx
         g = nx.DiGraph()
