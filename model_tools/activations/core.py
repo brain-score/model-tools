@@ -1,7 +1,8 @@
 import copy
+import os
+
 import functools
 import logging
-import os
 from collections import OrderedDict
 from multiprocessing.pool import ThreadPool
 
