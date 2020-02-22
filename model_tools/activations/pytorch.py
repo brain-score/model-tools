@@ -103,9 +103,9 @@ class PytorchWrapper:
         return g
 
 
-def load_preprocess_images(image_filepaths, image_size, **preprocess_kwargs):
+def load_preprocess_images(image_filepaths, image_size, **kwargs):
     images = load_images(image_filepaths)
-    images = preprocess_images(images, image_size=image_size, **preprocess_kwargs)
+    images = preprocess_images(images, image_size=image_size, **kwargs)
     return images
 
 
