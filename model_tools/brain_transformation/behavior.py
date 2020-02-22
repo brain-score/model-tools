@@ -48,6 +48,11 @@ class LogitsBehavior(BrainModel):
 
 class ProbabilitiesMapping(BrainModel):
     def __init__(self, identifier, activations_model, layer):
+        """
+        :param identifier: a string to identify the model
+        :param activations_model: the model from which to retrieve representations for stimuli
+        :param layer: the single behavioral readout layer.
+        """
         self.identifier = identifier
         self.activations_model = activations_model
         self.layer = layer
