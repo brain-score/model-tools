@@ -14,9 +14,12 @@ requirements = [
     "numpy",
     "tqdm",
     "torch",
+    "torchvision",
+    "pandas==0.25.3",
     "tensorflow==1.15",
     "keras",
     "scikit-learn",
+    "Pillow",
     "result_caching @ git+https://github.com/mschrimpf/result_caching",
 ]
 
