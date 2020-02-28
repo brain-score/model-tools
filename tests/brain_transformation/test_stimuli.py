@@ -1,5 +1,6 @@
+import imageio
 import numpy as np
-import scipy.misc
+
 from pytest import approx
 
 import brainio_collection
@@ -21,7 +22,7 @@ class TestPixelsToDegrees:
         assert (converted_stimuli['degrees'] == 10).all()
         for image_id in converted_stimuli['image_id']:
             image_path = converted_stimuli.get_image(image_id)
-            image = scipy.misc.imread(image_path)
+            image = imageio.imread(image_path)
             np.testing.assert_array_equal(image.shape, [224, 224, 3])
 
     def test_gray_background(self):
