@@ -15,7 +15,6 @@ requirements = [
     "tqdm",
     "torch",
     "torchvision",
-    "pandas==0.25.3",
     "tensorflow==1.15",
     "keras",
     "scikit-learn",
