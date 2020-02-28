@@ -34,7 +34,7 @@ class TestPixelsToDegrees:
         pixels_to_degrees = PixelsToDegrees(target_pixels=model_pixels)
         converted_stimuli = pixels_to_degrees(stimulus_set)
         image_path = converted_stimuli.get_image(converted_stimuli['image_id'].values[0])
-        image = scipy.misc.imread(image_path)
+        image = imageio.imread(image_path)
 
         amount_gray = 0
         for index in np.ndindex(image.shape[:2]):
@@ -53,7 +53,7 @@ class TestPixelsToDegrees:
         pixels_to_degrees = PixelsToDegrees(target_pixels=model_pixels)
         converted_stimuli = pixels_to_degrees(stimulus_set)
         image_path = converted_stimuli.get_image(converted_stimuli['image_id'].values[0])
-        image = scipy.misc.imread(image_path)
+        image = imageio.imread(image_path)
 
         gray = [128, 128, 128]
         assert (image[48, 48] == gray).all()
