@@ -8,6 +8,7 @@ from .neural import LayerMappedModel, LayerSelection, LayerScores
 from .stimuli import PixelsToDegrees
 from .search import VisualSearchObjArray
 
+
 class ModelCommitment(BrainModel):
     """
     Standard process to convert a BaseModel (e.g. standard Machine Learning/Computer Vision model)
@@ -21,7 +22,8 @@ class ModelCommitment(BrainModel):
         'IT': LazyLoad(MajajITPublicBenchmark),
     }
 
-    def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None, search_target_model_param=None, search_stimuli_model_param=None):
+    def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None,
+                 search_target_model_param=None, search_stimuli_model_param=None):
         self.layers = layers
         self.region_benchmarks = {**self.standard_region_benchmarks, **(region_benchmarks or {})}
         layer_model = LayerMappedModel(identifier=identifier, activations_model=activations_model)
@@ -30,32 +32,23 @@ class ModelCommitment(BrainModel):
         behavioral_readout_layer = behavioral_readout_layer or layers[-1]
         probabilities_behavior = ProbabilitiesMapping(identifier=identifier, activations_model=activations_model,
                                                       layer=behavioral_readout_layer)
+        search_model = VisualSearchObjArray(identifier=identifier, target_model_param=search_target_model_param,
+                                            stimuli_model_param=search_stimuli_model_param)
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
-                                               BrainModel.Task.probabilities: probabilities_behavior})
+                                               BrainModel.Task.probabilities: probabilities_behavior,
+                                               BrainModel.Task.visual_search_obj_arr: search_model})
         self.do_behavior = False
-
-        self.search_model = VisualSearchObjArray(identifier=identifier, target_model_param=search_target_model_param, stimuli_model_param=search_stimuli_model_param)
-        self.do_search = False
 
     def start_task(self, task: BrainModel.Task, *args, **kwargs):
         if task != BrainModel.Task.passive:
-            if task == BrainModel.Task.visual_search_obj_arr:
-                self.search_model.start_task(task, **kwargs)
-                self.do_behavior = False
-                self.do_search = True
-            else:
-                self.behavior_model.start_task(task, *args, **kwargs)
-                self.do_behavior = True
-                self.do_search = False
+            self.behavior_model.start_task(task, *args, **kwargs)
+            self.do_behavior = True
         else:
             self.do_behavior = False
-            self.do_search = False
 
     def look_at(self, stimuli):
         if self.do_behavior:
             return self.behavior_model.look_at(stimuli)
-        elif self.do_search:
-            return self.search_model.look_at(stimuli)
         else:
             return self.layer_model.look_at(stimuli)
 
