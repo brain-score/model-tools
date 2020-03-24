@@ -22,7 +22,7 @@ class ModelCommitment(BrainModel):
 
     def __init__(self, identifier,
                  activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None,
-                 visual_degrees=10):
+                 visual_degrees=8):
         self.layers = layers
         self.region_benchmarks = {**self.standard_region_benchmarks, **(region_benchmarks or {})}
         layer_model = LayerMappedModel(identifier=identifier, activations_model=activations_model)
