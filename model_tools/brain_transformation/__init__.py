@@ -1,6 +1,6 @@
-from brainscore.model_interface import BrainModel
-from brainscore.public_benchmarks import FreemanZiembaV1PublicBenchmark, FreemanZiembaV2PublicBenchmark, \
+from brainscore.benchmarks.public_benchmarks import FreemanZiembaV1PublicBenchmark, FreemanZiembaV2PublicBenchmark, \
     MajajV4PublicBenchmark, MajajITPublicBenchmark
+from brainscore.model_interface import BrainModel
 from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
 from .behavior import BehaviorArbiter, LogitsBehavior, ProbabilitiesMapping
