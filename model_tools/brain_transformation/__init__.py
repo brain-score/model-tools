@@ -1,6 +1,6 @@
-from brainscore.model_interface import BrainModel
-from brainscore.public_benchmarks import FreemanZiembaV1PublicBenchmark, FreemanZiembaV2PublicBenchmark, \
+from brainscore.benchmarks.public_benchmarks import FreemanZiembaV1PublicBenchmark, FreemanZiembaV2PublicBenchmark, \
     MajajV4PublicBenchmark, MajajITPublicBenchmark
+from brainscore.model_interface import BrainModel
 from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
 from .behavior import BehaviorArbiter, LogitsBehavior, ProbabilitiesMapping
@@ -23,8 +23,9 @@ class ModelCommitment(BrainModel):
     }
 
     def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None,
-                 search_target_model_param=None, search_stimuli_model_param=None):
+                 search_target_model_param=None, search_stimuli_model_param=None, visual_degrees=8):
         self.layers = layers
+        self.activations_model = activations_model
         self.region_benchmarks = {**self.standard_region_benchmarks, **(region_benchmarks or {})}
         layer_model = LayerMappedModel(identifier=identifier, activations_model=activations_model)
         self.layer_model = TemporalIgnore(layer_model)
@@ -42,6 +43,11 @@ class ModelCommitment(BrainModel):
                                                BrainModel.Task.visual_search: search_model})
         self.do_behavior = False
 
+        self._visual_degrees = visual_degrees
+
+    def visual_degrees(self) -> int:
+        return self._visual_degrees
+
     def start_task(self, task: BrainModel.Task, *args, **kwargs):
         if task != BrainModel.Task.passive:
             self.behavior_model.start_task(task, *args, **kwargs)
@@ -57,7 +63,8 @@ class ModelCommitment(BrainModel):
 
     def commit_region(self, region):
         layer_selection = LayerSelection(model_identifier=self.layer_model.identifier,
-                                         activations_model=self.layer_model.activations_model, layers=self.layers)
+                                         activations_model=self.layer_model.activations_model, layers=self.layers,
+                                         visual_degrees=self.visual_degrees())
         benchmark = self.region_benchmarks[region]
         best_layer = layer_selection(selection_identifier=region, benchmark=benchmark)
         self.layer_model.commit(region, best_layer)
