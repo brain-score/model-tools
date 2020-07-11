@@ -5,7 +5,6 @@ from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
 from .behavior import BehaviorArbiter, LogitsBehavior, ProbabilitiesMapping
 from .neural import LayerMappedModel, LayerSelection, LayerScores
-from .stimuli import PixelsToDegrees
 from .search import VisualSearchObjArray, VisualSearch
 
 
