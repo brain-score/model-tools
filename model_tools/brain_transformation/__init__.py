@@ -6,7 +6,7 @@ from model_tools.brain_transformation.temporal import TemporalIgnore
 from .behavior import BehaviorArbiter, LogitsBehavior, ProbabilitiesMapping
 from .neural import LayerMappedModel, LayerSelection, LayerScores
 from .stimuli import PixelsToDegrees
-from .search import VisualSearchObjArray
+from .search import VisualSearchObjArray, VisualSearch
 
 
 class ModelCommitment(BrainModel):
@@ -32,11 +32,14 @@ class ModelCommitment(BrainModel):
         behavioral_readout_layer = behavioral_readout_layer or layers[-1]
         probabilities_behavior = ProbabilitiesMapping(identifier=identifier, activations_model=activations_model,
                                                       layer=behavioral_readout_layer)
-        search_model = VisualSearchObjArray(identifier=identifier, target_model_param=search_target_model_param,
+        search_obj_model = VisualSearchObjArray(identifier=identifier, target_model_param=search_target_model_param,
+                                            stimuli_model_param=search_stimuli_model_param)
+        search_model = VisualSearch(identifier=identifier, target_model_param=search_target_model_param,
                                             stimuli_model_param=search_stimuli_model_param)
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
                                                BrainModel.Task.probabilities: probabilities_behavior,
-                                               BrainModel.Task.visual_search_obj_arr: search_model})
+                                               BrainModel.Task.visual_search_obj_arr: search_obj_model,
+                                               BrainModel.Task.visual_search: search_model})
         self.do_behavior = False
 
     def start_task(self, task: BrainModel.Task, *args, **kwargs):
