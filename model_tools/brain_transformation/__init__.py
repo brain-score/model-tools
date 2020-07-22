@@ -38,7 +38,7 @@ class ModelCommitment(BrainModel):
                                             stimuli_model_param=search_stimuli_model_param)
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
                                                BrainModel.Task.probabilities: probabilities_behavior,
-                                               BrainModel.Task.visual_search_obj_arr: search_obj_model,
+                                               BrainModel.Task.object_search: search_obj_model,
                                                BrainModel.Task.visual_search: search_model})
         self.do_behavior = False
 

@@ -171,7 +171,6 @@ class VisualSearch(BrainModel):
         self._logger = logging.getLogger(fullname(self))
 
     def start_task(self, task: BrainModel.Task, **kwargs):
-        self.fix = kwargs['fix']  # fixation map
         self.max_fix = kwargs['max_fix']  # maximum allowed fixation excluding the very first fixation
         self.data_len = kwargs['data_len']  # Number of stimuli
         self.current_task = task
@@ -247,7 +246,7 @@ class VisualSearch(BrainModel):
 
                 saccade.append((fxn_x, fxn_y))
 
-                attn, t = self.remove_attn(attn, saccade[-1][0], saccade[-1][1])
+                attn, t = self.remove_attn(attn, saccade[-1][0], saccade[-1][1], gt)
 
                 if t:
                     self.score[data_cnt, k + 1] = 1
@@ -266,7 +265,7 @@ class VisualSearch(BrainModel):
 
         return (self.score, self.data)
 
-    def remove_attn(self, img, x, y):
+    def remove_attn(self, img, x, y, gt):
         img[(x - int(self.ior_size/2)):(x + int(self.ior_size/2)), (y - int(self.ior_size/2)):(y + int(self.ior_size/2))] = 0
 
         fxt_xtop = x-int(self.ior_size/2)
