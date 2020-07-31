@@ -45,7 +45,7 @@ class ActivationsExtractorHelper:
     def from_stimulus_set(self, stimulus_set, layers, stimuli_identifier=None):
         """
         :param stimuli_identifier: a stimuli identifier for the stored results file.
-            False to disable saving. None to use `stimulus_set.name`
+            False to disable saving. None to use `stimulus_set.identifier`
         """
         if stimuli_identifier is None:
             stimuli_identifier = stimulus_set.identifier
