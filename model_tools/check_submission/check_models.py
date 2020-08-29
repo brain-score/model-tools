@@ -18,10 +18,6 @@ from model_tools.brain_transformation import ModelCommitment
 def check_brain_models(module):
     module = __import__(module)
     for model in module.get_model_list():
-        layers = module.get_layers(model)
-        assert layers is not None
-        assert isinstance(layers, list)
-        assert len(layers) > 0
         model = module.get_model(model)
         assert model is not None
         assert isinstance(model, BrainModel)
