@@ -51,8 +51,7 @@ class ActivationsExtractorHelper:
             stimuli_identifier = stimulus_set.identifier
         for hook in self._stimulus_set_hooks.copy().values():  # copy to avoid stale handles
             stimulus_set = hook(stimulus_set)
-        print(f'---------Stimulus identifier {stimuli_identifier}')
-        stimuli_paths = [stimulus_set.get_image(image_id) for image_id in stimulus_set['image_id']]
+        stimuli_paths = [stimulus_set.get_image(image_id) for image_id in stimulus_set['image_id']][:1]
         activations = self.from_paths(stimuli_paths=stimuli_paths, layers=layers, stimuli_identifier=stimuli_identifier)
         activations = attach_stimulus_set_meta(activations, stimulus_set)
         return activations
@@ -133,7 +132,6 @@ class ActivationsExtractorHelper:
             batch_activations = self._get_batch_activations(batch_inputs, layer_names=layers, batch_size=batch_size)
             for hook in self._batch_activations_hooks.copy().values():  # copy to avoid handle re-enabling messing with the loop
                 batch_activations = hook(batch_activations)
-
             if layer_activations is None:
                 layer_activations = copy.copy(batch_activations)
             else:
@@ -251,7 +249,6 @@ def attach_stimulus_set_meta(assembly, stimulus_set):
     stimulus_paths = [stimulus_set.get_image(image_id) for image_id in stimulus_set['image_id']]
     stimulus_paths = [lstrip_local(path) for path in stimulus_paths]
     assembly_paths = [lstrip_local(path) for path in assembly['stimulus_path'].values]
-
     assert (np.array(assembly_paths) == np.array(stimulus_paths)).all()
     assembly['stimulus_path'] = stimulus_set['image_id'].values
     assembly = assembly.rename({'stimulus_path': 'image_id'})
