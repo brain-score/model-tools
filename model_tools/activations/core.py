@@ -51,7 +51,7 @@ class ActivationsExtractorHelper:
             stimuli_identifier = stimulus_set.identifier
         for hook in self._stimulus_set_hooks.copy().values():  # copy to avoid stale handles
             stimulus_set = hook(stimulus_set)
-        stimuli_paths = [stimulus_set.get_image(image_id) for image_id in stimulus_set['image_id']][:1]
+        stimuli_paths = [stimulus_set.get_image(image_id) for image_id in stimulus_set['image_id']]
         activations = self.from_paths(stimuli_paths=stimuli_paths, layers=layers, stimuli_identifier=stimuli_identifier)
         activations = attach_stimulus_set_meta(activations, stimulus_set)
         return activations
@@ -132,6 +132,7 @@ class ActivationsExtractorHelper:
             batch_activations = self._get_batch_activations(batch_inputs, layer_names=layers, batch_size=batch_size)
             for hook in self._batch_activations_hooks.copy().values():  # copy to avoid handle re-enabling messing with the loop
                 batch_activations = hook(batch_activations)
+
             if layer_activations is None:
                 layer_activations = copy.copy(batch_activations)
             else:
