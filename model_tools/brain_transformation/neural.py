@@ -19,7 +19,7 @@ class LayerMappedModel(BrainModel):
         self.region_layer_map = region_layer_map or {}
         self.recorded_regions = []
 
-    def look_at(self, stimuli):
+    def look_at(self, stimuli, number_of_trials=1):
         layer_regions = {}
         for region in self.recorded_regions:
             layers = self.region_layer_map[region]
@@ -134,9 +134,9 @@ class PreRunLayers:
         self._layers = layers
         self._forward = forward
 
-    def look_at(self, stimuli):
+    def look_at(self, stimuli, number_of_trials=1):
         self._model(layers=self._layers, stimuli=stimuli)
-        return self._forward.look_at(stimuli)
+        return self._forward.look_at(stimuli, number_of_trials=number_of_trials)
 
     def __getattr__(self, item):
         if item in ['look_at']:
