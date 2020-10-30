@@ -1,5 +1,5 @@
 from brainscore.benchmarks.public_benchmarks import FreemanZiembaV1PublicBenchmark, FreemanZiembaV2PublicBenchmark, \
-    MajajV4PublicBenchmark, MajajITPublicBenchmark
+    MajajHongV4PublicBenchmark, MajajHongITPublicBenchmark
 from brainscore.model_interface import BrainModel
 from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
@@ -16,8 +16,8 @@ class ModelCommitment(BrainModel):
     standard_region_benchmarks = {
         'V1': LazyLoad(FreemanZiembaV1PublicBenchmark),
         'V2': LazyLoad(FreemanZiembaV2PublicBenchmark),
-        'V4': LazyLoad(MajajV4PublicBenchmark),
-        'IT': LazyLoad(MajajITPublicBenchmark),
+        'V4': LazyLoad(MajajHongV4PublicBenchmark),
+        'IT': LazyLoad(MajajHongITPublicBenchmark),
     }
 
     def __init__(self, identifier,
@@ -48,7 +48,8 @@ class ModelCommitment(BrainModel):
         else:
             self.do_behavior = False
 
-    def look_at(self, stimuli):
+    def look_at(self, stimuli, number_of_trials=1):
+        # ignore number_of_trials, do not forward (lower implementations use default=1)
         if self.do_behavior:
             return self.behavior_model.look_at(stimuli)
         else:

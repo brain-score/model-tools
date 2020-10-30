@@ -1,11 +1,11 @@
 import functools
-import os
-
 import numpy as np
+import os
 import pandas as pd
 import pytest
 from pytest import approx
 
+from brainio_base.assemblies import BehavioralAssembly
 from brainio_base.stimuli import StimulusSet
 from brainscore.benchmarks.rajalingham2018 import DicarloRajalingham2018I2n
 from brainscore.benchmarks.screen import place_on_screen
@@ -47,13 +47,16 @@ class TestLogitsBehavior:
         activations_model = model_ctr()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=None, behavioral_readout_layer='dummy')  # not needed
-        stimuli = StimulusSet({'image_id': ['abc123']})
-        stimuli.image_paths = {'abc123': os.path.join(os.path.dirname(__file__), 'rgb1.jpg')}
-        stimuli.name = 'test_logits_behavior.creates_synset'
+        stimuli = StimulusSet({'image_id': ['1', '2'], 'filename': ['rgb1', 'rgb2']})
+        stimuli.image_paths = {'1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
+                               '2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
+        stimuli.identifier = 'test_logits_behavior.creates_synset'
         brain_model.start_task(BrainModel.Task.label, 'imagenet')
-        synsets = brain_model.look_at(stimuli)
-        assert len(synsets) == 1
-        assert synsets[0].startswith('n')
+        behavior = brain_model.look_at(stimuli)
+        assert isinstance(behavior, BehavioralAssembly)
+        assert set(behavior['image_id'].values) == {'1', '2'}
+        assert len(behavior['synset']) == 2
+        assert behavior['synset'].values[0].startswith('n')
 
 
 class TestProbabilitiesMapping:
@@ -64,7 +67,7 @@ class TestProbabilitiesMapping:
         fitting_stimuli = StimulusSet({'image_id': ['rgb1', 'rgb2'], 'image_label': ['label1', 'label2']})
         fitting_stimuli.image_paths = {'rgb1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
                                        'rgb2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
-        fitting_stimuli.name = 'test_probabilities_mapping.creates_probabilities'
+        fitting_stimuli.identifier = 'test_probabilities_mapping.creates_probabilities'
         fitting_stimuli = place_on_screen(fitting_stimuli, target_visual_degrees=brain_model.visual_degrees(),
                                           source_visual_degrees=8)
         brain_model.start_task(BrainModel.Task.probabilities, fitting_stimuli)

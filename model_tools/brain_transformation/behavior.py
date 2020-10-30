@@ -34,7 +34,7 @@ class LogitsBehavior(BrainModel):
             assert fitting_stimuli == 'imagenet'
         self.current_task = task
 
-    def look_at(self, stimuli):
+    def look_at(self, stimuli, number_of_trials=1):
         if self.current_task is BrainModel.Task.passive:
             return
         logits = self.activations_model(stimuli, layers=['logits'])
@@ -44,7 +44,10 @@ class LogitsBehavior(BrainModel):
         with open(os.path.join(os.path.dirname(__file__), 'imagenet_classes.txt')) as f:
             synsets = f.read().splitlines()
         prediction_synsets = [synsets[index] for index in prediction_indices]
-        return prediction_synsets
+        return BehavioralAssembly([prediction_synsets], coords={
+            **{coord: (dims, values) for coord, dims, values in walk_coords(logits['presentation'])},
+            **{'synset': ('presentation', prediction_synsets), 'logit': ('presentation', prediction_indices)}},
+                                  dims=['choice', 'presentation'])
 
 
 class ProbabilitiesMapping(BrainModel):
@@ -70,7 +73,7 @@ class ProbabilitiesMapping(BrainModel):
             "image_id ordering is incorrect"
         self.classifier.fit(fitting_features, fitting_stimuli['image_label'])
 
-    def look_at(self, stimuli):
+    def look_at(self, stimuli, number_of_trials=1):
         if self.current_task is BrainModel.Task.passive:
             return
         features = self.activations_model(stimuli, layers=self.readout)
