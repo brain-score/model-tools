@@ -64,12 +64,25 @@ def pytorch_alexnet_resize():
 
     return PytorchWrapper(alexnet(pretrained=True), preprocessing, identifier='alexnet-resize')
 
-def pytorch_transformer():
-    from pytorch_pretrained_vit import ViT
+def pytorch_transformer_substitute():
+    import torch
+    from torch import nn
     from model_tools.activations.pytorch import load_preprocess_images
-    model = ViT('B_16_imagenet1k', pretrained=True)
-    preprocessing = functools.partial(load_preprocess_images, image_size=model.image_size[0])
-    return PytorchWrapper(model=model, preprocessing=preprocessing)
+
+    class MyTransformer(nn.Module):
+        def __init__(self):
+            super(MyTransformer, self).__init__()
+            self.conv = torch.nn.Conv1d(in_channels=3, out_channels=2, kernel_size=3)
+            self.relu = torch.nn.ReLU()
+
+        def forward(self, x):
+            x = x.view(*x.shape[:2], -1)
+            x = self.conv(x)
+            x = self.relu(x)
+            return x
+
+    preprocessing = functools.partial(load_preprocess_images, image_size=224)
+    return PytorchWrapper(model=MyTransformer(), preprocessing=preprocessing)
 
 def keras_vgg19():
     import keras
@@ -135,7 +148,7 @@ def tfslim_vgg16():
 models_layers = [
     pytest.param(pytorch_custom, ['linear', 'relu2']),
     pytest.param(pytorch_alexnet, ['features.12', 'classifier.5'], marks=pytest.mark.memory_intense),
-    pytest.param(pytorch_transformer, ['transformer.blocks.11.pwff.fc2'], marks=pytest.mark.memory_intense),
+    pytest.param(pytorch_transformer_substitute, ['relu'], marks=pytest.mark.memory_intense),
     pytest.param(keras_vgg19, ['block3_pool'], marks=pytest.mark.memory_intense),
     pytest.param(tfslim_custom, ['my_model/pool2'], marks=pytest.mark.memory_intense),
     pytest.param(tfslim_vgg16, ['vgg_16/pool5'], marks=pytest.mark.memory_intense),
@@ -246,8 +259,8 @@ def test_infer_identifier(model_ctr, expected_identifier):
 
 
 def test_transformer_meta():
-    model = pytorch_transformer()
-    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['transformer.blocks.11.pwff.fc2'])
+    model = pytorch_transformer_substitute()
+    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['relu'])
     assert hasattr(activations, 'channel')
     assert hasattr(activations, 'embedding')
     assert len(set(activations['neuroid_id'].values)) == len(activations['neuroid'])
