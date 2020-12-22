@@ -64,6 +64,12 @@ def pytorch_alexnet_resize():
 
     return PytorchWrapper(alexnet(pretrained=True), preprocessing, identifier='alexnet-resize')
 
+def pytorch_transformer():
+    from pytorch_pretrained_vit import ViT
+    from model_tools.activations.pytorch import load_preprocess_images
+    model = ViT('B_16_imagenet1k', pretrained=True)
+    preprocessing = functools.partial(load_preprocess_images, image_size=model.image_size[0])
+    return PytorchWrapper(model=model, preprocessing=preprocessing)
 
 def keras_vgg19():
     import keras
