@@ -135,6 +135,7 @@ def tfslim_vgg16():
 models_layers = [
     pytest.param(pytorch_custom, ['linear', 'relu2']),
     pytest.param(pytorch_alexnet, ['features.12', 'classifier.5'], marks=pytest.mark.memory_intense),
+    pytest.param(pytorch_transformer, ['transformer.blocks.11.pwff.fc2'], marks=pytest.mark.memory_intense),
     pytest.param(keras_vgg19, ['block3_pool'], marks=pytest.mark.memory_intense),
     pytest.param(tfslim_custom, ['my_model/pool2'], marks=pytest.mark.memory_intense),
     pytest.param(tfslim_vgg16, ['vgg_16/pool5'], marks=pytest.mark.memory_intense),
