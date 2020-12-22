@@ -245,6 +245,14 @@ def test_infer_identifier(model_ctr, expected_identifier):
     assert model.identifier == expected_identifier
 
 
+def test_transformer_meta():
+    model = pytorch_transformer()
+    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['transformer.blocks.11.pwff.fc2'])
+    assert hasattr(activations, 'channel')
+    assert hasattr(activations, 'embedding')
+    assert len(set(activations['neuroid_id'].values)) == len(activations['neuroid'])
+
+
 def test_convolution_meta():
     model = pytorch_custom()
     activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['conv1'])
