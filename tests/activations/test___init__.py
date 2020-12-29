@@ -253,7 +253,7 @@ def test_infer_identifier(model_ctr, expected_identifier):
 
 def test_transformer_meta():
     model = pytorch_transformer_substitute()
-    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['relu'])
+    activations = model(stimuli=[os.path.join(os.path.dirname(__file__), 'rgb.jpg')], layers=['relu1'])
     assert hasattr(activations, 'channel')
     assert hasattr(activations, 'embedding')
     assert len(set(activations['neuroid_id'].values)) == len(activations['neuroid'])
