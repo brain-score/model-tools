@@ -192,12 +192,12 @@ class ActivationsExtractorHelper:
         activations, flatten_indices = flatten(layer_activations, return_index=True)  # collapse for single neuroid dim
         assert flatten_indices.shape[1] in [1, 2, 3]
         if flatten_indices.shape[1] == 1:    # FC
-            flatten_coord_names = ['channel']
+            flatten_coord_names = ['channel', 'channel_x', 'channel_y']
         elif flatten_indices.shape[1] == 2:  # Transformer
             flatten_coord_names = ['channel', 'embedding']
         elif flatten_indices.shape[1] == 3:  # 2DConv
             flatten_coord_names = ['channel', 'channel_x', 'channel_y']
-        flatten_coords = {flatten_coord_names[i]: [sample_index[i] for sample_index in flatten_indices]
+        flatten_coords = {flatten_coord_names[i]: [sample_index[i] if i < flatten_indices.shape[1] else np.nan for sample_index in flatten_indices]
                           for i in range(len(flatten_coord_names))}
         layer_assembly = NeuroidAssembly(
             activations,
