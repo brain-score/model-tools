@@ -5,6 +5,7 @@ from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
 from .behavior import BehaviorArbiter, LogitsBehavior, ProbabilitiesMapping
 from .neural import LayerMappedModel, LayerSelection, LayerScores
+from .search import VisualSearchObjArray, VisualSearch
 
 
 class ModelCommitment(BrainModel):
@@ -20,9 +21,8 @@ class ModelCommitment(BrainModel):
         'IT': LazyLoad(MajajHongITPublicBenchmark),
     }
 
-    def __init__(self, identifier,
-                 activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None,
-                 visual_degrees=8):
+    def __init__(self, identifier, activations_model, layers, behavioral_readout_layer=None, region_benchmarks=None,
+                 search_target_model_param=None, search_stimuli_model_param=None, visual_degrees=8):
         self.layers = layers
         self.activations_model = activations_model
         self.region_benchmarks = {**self.standard_region_benchmarks, **(region_benchmarks or {})}
@@ -32,8 +32,14 @@ class ModelCommitment(BrainModel):
         behavioral_readout_layer = behavioral_readout_layer or layers[-1]
         probabilities_behavior = ProbabilitiesMapping(identifier=identifier, activations_model=activations_model,
                                                       layer=behavioral_readout_layer)
+        search_obj_model = VisualSearchObjArray(identifier=identifier, target_model_param=search_target_model_param,
+                                            stimuli_model_param=search_stimuli_model_param)
+        search_model = VisualSearch(identifier=identifier, target_model_param=search_target_model_param,
+                                            stimuli_model_param=search_stimuli_model_param)
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
-                                               BrainModel.Task.probabilities: probabilities_behavior})
+                                               BrainModel.Task.probabilities: probabilities_behavior,
+                                               BrainModel.Task.object_search: search_obj_model,
+                                               BrainModel.Task.visual_search: search_model})
         self.do_behavior = False
 
         self._visual_degrees = visual_degrees

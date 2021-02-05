@@ -19,6 +19,7 @@ requirements = [
     "keras==2.3.1",
     "scikit-learn",
     "result_caching @ git+https://github.com/mschrimpf/result_caching",
+    "opencv-contrib-python",
 ]
 
 setup(
