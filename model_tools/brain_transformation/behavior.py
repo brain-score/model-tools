@@ -1,4 +1,3 @@
-import os
 from collections import OrderedDict
 
 import sklearn.linear_model
@@ -22,32 +21,27 @@ class BehaviorArbiter(BrainModel):
         return self.current_executor.look_at(stimuli, *args, **kwargs)
 
 
-class LogitsBehavior(BrainModel):
-    def __init__(self, identifier, activations_model):
-        self.identifier = identifier
-        self.activations_model = activations_model
-        self.current_task = None
+class LabelBehavior(BrainModel):
+    def __init__(self, probabilities_mapping):
+        self.probabilities_mapping = probabilities_mapping
 
     def start_task(self, task: BrainModel.Task, fitting_stimuli):
         assert task in [BrainModel.Task.passive, BrainModel.Task.label]
         if task == BrainModel.Task.label:
-            assert fitting_stimuli == 'imagenet'
-        self.current_task = task
+            self.probabilities_mapping.start_task(BrainModel.Task.probabilities, fitting_stimuli=fitting_stimuli)
 
     def look_at(self, stimuli, number_of_trials=1):
-        if self.current_task is BrainModel.Task.passive:
-            return
-        logits = self.activations_model(stimuli, layers=['logits'])
-        assert len(logits['neuroid']) == 1000
-        logits = logits.transpose('presentation', 'neuroid')
-        prediction_indices = logits.values.argmax(axis=1)
-        with open(os.path.join(os.path.dirname(__file__), 'imagenet_classes.txt')) as f:
-            synsets = f.read().splitlines()
-        prediction_synsets = [synsets[index] for index in prediction_indices]
-        return BehavioralAssembly([prediction_synsets], coords={
-            **{coord: (dims, values) for coord, dims, values in walk_coords(logits['presentation'])},
-            **{'synset': ('presentation', prediction_synsets), 'logit': ('presentation', prediction_indices)}},
-                                  dims=['choice', 'presentation'])
+        probabilities = self.probabilities_mapping.look_at(stimuli=stimuli, number_of_trials=number_of_trials)
+        assert len(probabilities['choice']) == 1_000
+        prediction_indices = probabilities.argmax('choice').values
+        predictions = probabilities['choice'].values[prediction_indices]
+        return BehavioralAssembly(predictions, coords={
+            **{coord: (dims, values) for coord, dims, values in walk_coords(probabilities['presentation'])},
+            **{'synset': ('presentation', predictions),
+               'logit': ('presentation', predictions),
+               'label': ('presentation', predictions),
+               'choice': ('presentation', predictions)}},
+                                  dims=['presentation'])
 
 
 class ProbabilitiesMapping(BrainModel):
