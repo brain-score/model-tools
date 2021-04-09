@@ -1,11 +1,9 @@
-import logging
-
-import numpy as np
-
 from typing import List, Tuple
 
-from brainio_base.assemblies import merge_data_arrays
+import logging
+import numpy as np
 
+from brainio_base.assemblies import merge_data_arrays, walk_coords
 from brainscore.model_interface import BrainModel
 from model_tools.utils import fullname
 
@@ -46,8 +44,20 @@ class TemporalIgnore(BrainModel):
         responses = merge_data_arrays(time_responses)
         if len(self._time_bins) == 1:
             responses = responses.squeeze('time_bin')
+        responses = fix_timebin_naming(responses)
         return responses
 
     @property
     def identifier(self):
         return self._layer_model.identifier
+
+
+def fix_timebin_naming(assembly):
+    """ renames coordinate time_bin_level_0 to time_bin_start and time_bin_level_1 to time_bin_end. """
+    # for some reason xarray renames time_bin_start and time_bin_end to time_bin_level_0 and time_bin_level_1
+    # let's fix the naming again (xarray.rename for some reason does not work since it cannot find the coords)
+    rename = dict(time_bin_level_0='time_bin_start', time_bin_level_1='time_bin_end')
+    assembly = type(assembly)(assembly.values, coords={
+        rename[coord] if coord in rename else coord: (dims, values)
+        for coord, dims, values in walk_coords(assembly)}, dims=assembly.dims)
+    return assembly
