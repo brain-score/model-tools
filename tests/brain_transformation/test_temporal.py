@@ -24,10 +24,6 @@ class LayerMappedModelMock:
 
 
 class TestTemporalIgnore:
-    # note that these tests do not seem to elicit an error occuring in
-    # https://github.com/brain-score/model-tools/commit/f1dc4a68a388740bbd18146cc02591d7d9ba44bb (or earlier)
-    # where time_bin_start would be erroneously be renamed to time_bin_level_0 (and end to _1) after `merge_data_arrays`
-
     def test_single_timebin(self):
         model = TemporalIgnore(layer_model=LayerMappedModelMock())
         model.start_recording(recording_target='IT', time_bins=[(70, 170)])

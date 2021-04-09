@@ -53,9 +53,13 @@ class TemporalIgnore(BrainModel):
 
 
 def fix_timebin_naming(assembly):
-    """ renames coordinate time_bin_level_0 to time_bin_start and time_bin_level_1 to time_bin_end. """
-    # for some reason xarray renames time_bin_start and time_bin_end to time_bin_level_0 and time_bin_level_1
-    # let's fix the naming again (xarray.rename for some reason does not work since it cannot find the coords)
+    """
+    renames coordinate time_bin_level_0 to time_bin_start and time_bin_level_1 to time_bin_end
+    to work around bug introduced in xarray 0.16.2 (and still present in 0.17.0).
+    """
+    # jjpr had found that xarray 0.16.2 introduced a bug where xarray.core.alignment._get_joiner assumes Index when the
+    # object is a MultiIndex.
+    # xarray.rename for some reason does not work for some reason, it cannot find the coords
     rename = dict(time_bin_level_0='time_bin_start', time_bin_level_1='time_bin_end')
     assembly = type(assembly)(assembly.values, coords={
         rename[coord] if coord in rename else coord: (dims, values)
