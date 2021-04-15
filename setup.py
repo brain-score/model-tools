@@ -18,8 +18,7 @@ requirements = [
     "tensorflow==1.15",
     "keras==2.3.1",
     "scikit-learn",
-    "pandas==0.25.3",
-    "result_caching @ git+https://github.com/mschrimpf/result_caching",
+    "result_caching @ git+https://github.com/brain-score/result_caching",
 ]
 
 setup(
@@ -41,7 +40,6 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
     test_suite='tests',
