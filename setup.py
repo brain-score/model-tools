@@ -15,7 +15,7 @@ requirements = [
     "tqdm",
     "torch",
     "torchvision",
-    "tensorflow>=1.15",
+    "tensorflow==1.15",
     "keras==2.3.1",
     "scikit-learn",
     "result_caching @ git+https://github.com/brain-score/result_caching",
@@ -28,9 +28,6 @@ setup(
     long_description=readme,
     author="Martin Schrimpf",
     author_email='mschrimpf@mit.edu',
-    # url='https://github.com/mschrimpf/model-tools',
-
-    # above url creates organization dependency error
     url='https://github.com/brain-score/model-tools',
     packages=find_packages(exclude=['tests']),
     include_package_data=True,
