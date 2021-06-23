@@ -1,6 +1,6 @@
 import numpy as np
 
-from brainio_core.assemblies import NeuroidAssembly
+from brainio.assemblies import NeuroidAssembly
 from model_tools.brain_transformation import TemporalIgnore
 
 
