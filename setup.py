@@ -7,7 +7,7 @@ with open('README.md') as readme_file:
     readme = readme_file.read()
 
 requirements = [
-    "brainio-core @ git+https://github.com/brain-score/brainio-core",
+    "brainio @ git+https://github.com/brain-score/brainio",
     "brain-score @ git+https://github.com/brain-score/brain-score",
     "h5py",
     "Pillow",
