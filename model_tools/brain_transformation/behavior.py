@@ -22,7 +22,7 @@ class BehaviorArbiter(BrainModel):
         return self.current_executor.look_at(stimuli, *args, **kwargs)
 
 
-class LogitsBehavior(BrainModel):
+class LabelBehavior(BrainModel):
     def __init__(self, identifier, activations_model):
         self._identifier = identifier
         self.activations_model = activations_model
@@ -32,10 +32,14 @@ class LogitsBehavior(BrainModel):
     def identifier(self):
         return self._identifier
 
-    def start_task(self, task: BrainModel.Task, fitting_stimuli):
-        assert task in [BrainModel.Task.passive, BrainModel.Task.label]
-        if task == BrainModel.Task.label:
-            assert fitting_stimuli == 'imagenet'
+    def start_task(self, task: BrainModel.Task, choice_labels):
+        assert task == BrainModel.Task.label
+        if choice_labels == 'imagenet':
+            pass # nothing to do, assuming the model was already trained on those labels
+        else:
+            # map imagenet labels to target labels
+            # from https://github.com/bethgelab/model-vs-human/blob/745046c4d82ff884af618756bd6a5f47b6f36c45/modelvshuman/datasets/decision_mappings.py#L30
+            ...
         self.current_task = task
 
     def look_at(self, stimuli, number_of_trials=1):
@@ -48,6 +52,7 @@ class LogitsBehavior(BrainModel):
         with open(os.path.join(os.path.dirname(__file__), 'imagenet_classes.txt')) as f:
             synsets = f.read().splitlines()
         prediction_synsets = [synsets[index] for index in prediction_indices]
+        # TODO: convert to choice_labels
         return BehavioralAssembly([prediction_synsets], coords={
             **{coord: (dims, values) for coord, dims, values in walk_coords(logits['presentation'])},
             **{'synset': ('presentation', prediction_synsets), 'logit': ('presentation', prediction_indices)}},
