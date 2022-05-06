@@ -1,14 +1,11 @@
-from os.path import join as pjoin
-import numpy as np
-from shutil import copyfile
-import os
-import linecache as lc
+import linecache
 
-from .. import constants as c
+import os
+from pathlib import Path
 
 categories = None
 WNIDs = None
-IMAGENET_CATEGORIES_FILE = pjoin(c.CODE_DIR, "helper", "categories.txt")
+IMAGENET_CATEGORIES_FILE = Path(__file__).parent / "categories.txt"
 
 
 def get_filenames_of_category(category, image_labels_path, categories):
@@ -51,7 +48,7 @@ def hypernyms_in_ilsvrc2012_categories(entity):
     If the entity itself is contained, it will be returned as well.
     """
 
-    return get_hypernyms("categories.txt", entity)
+    return get_hypernyms(IMAGENET_CATEGORIES_FILE, entity)
 
 
 def get_hypernyms(categories_file, entity):
@@ -163,6 +160,5 @@ def get_WNID_from_index(index):
 
     file_path = IMAGENET_CATEGORIES_FILE
     assert (os.path.exists(file_path)), "path to categories.txt wrong!"
-    line = lc.getline(file_path, index + 1)
+    line = linecache.getline(file_path, index + 1)
     return line.split(" ")[0]
-
