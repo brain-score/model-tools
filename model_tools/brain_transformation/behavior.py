@@ -116,7 +116,7 @@ class LabelToImagenetIndices:
 
 
 def softmax(x):
-    return np.exp(x) / np.sum(np.exp(x), axis=0)
+    return np.exp(x) / np.exp(x).sum(dim='neuroid')
 
 
 class ProbabilitiesMapping(BrainModel):
