@@ -59,6 +59,7 @@ class TestLabelBehavior:
 
     @pytest.mark.parametrize(['model_ctr'], [(pytorch_custom,)])
     def test_choicelabels(self, model_ctr):
+        np.random.seed(0)
         activations_model = model_ctr()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=['relu1', 'relu2'], behavioral_readout_layer='relu2')
