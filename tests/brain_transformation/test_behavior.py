@@ -2,6 +2,7 @@ import functools
 import numpy as np
 import os
 import pytest
+import torch.random
 import xarray as xr
 from brainio.assemblies import BehavioralAssembly
 from brainio.stimuli import StimulusSet
@@ -24,6 +25,8 @@ def pytorch_custom():
     class MyModel(nn.Module):
         def __init__(self):
             super(MyModel, self).__init__()
+            np.random.seed(0)
+            torch.random.manual_seed(0)
             self.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=2, kernel_size=3)
             self.relu1 = torch.nn.ReLU()
             linear_input_size = np.power((224 - 3 + 2 * 0) / 1 + 1, 2) * 2
@@ -45,7 +48,6 @@ def pytorch_custom():
 class TestLabelBehavior:
     @pytest.mark.parametrize(['model_ctr'], [(pytorch_custom,)])
     def test_imagenet_creates_synset(self, model_ctr):
-        np.random.seed(0)
         activations_model = model_ctr()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=None, behavioral_readout_layer='dummy')  # not needed
@@ -59,7 +61,6 @@ class TestLabelBehavior:
 
     @pytest.mark.parametrize(['model_ctr'], [(pytorch_custom,)])
     def test_choicelabels(self, model_ctr):
-        np.random.seed(0)
         activations_model = model_ctr()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=['relu1', 'relu2'], behavioral_readout_layer='relu2')
@@ -70,9 +71,9 @@ class TestLabelBehavior:
         assert isinstance(behavior, BehavioralAssembly)
         assert set(behavior['image_id'].values) == {'1', '2'}
         assert all(choice in choice_labels for choice in behavior.squeeze().values)
-        # these two labels do not make sense, but we're working with a random model
+        # these two labels do not necessarily make sense since we're working with a random model
         assert behavior.sel(image_id='1').values.item() == 'bear'
-        assert behavior.sel(image_id='2').values.item() == 'cat'
+        assert behavior.sel(image_id='2').values.item() == 'bird'
 
     def mock_stimulus_set(self):
         stimuli = StimulusSet({'image_id': ['1', '2'], 'filename': ['rgb1', 'rgb2']})
