@@ -42,23 +42,43 @@ def pytorch_custom():
     return PytorchWrapper(model=MyModel(), preprocessing=preprocessing)
 
 
-class TestLogitsBehavior:
+class TestLabelBehavior:
     @pytest.mark.parametrize(['model_ctr'], [(pytorch_custom,)])
-    def test_creates_synset(self, model_ctr):
+    def test_imagenet_creates_synset(self, model_ctr):
         np.random.seed(0)
         activations_model = model_ctr()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=None, behavioral_readout_layer='dummy')  # not needed
-        stimuli = StimulusSet({'image_id': ['1', '2'], 'filename': ['rgb1', 'rgb2']})
-        stimuli.image_paths = {'1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
-                               '2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
-        stimuli.identifier = 'test_logits_behavior.creates_synset'
+        stimuli = self.mock_stimulus_set()
         brain_model.start_task(BrainModel.Task.label, 'imagenet')
         behavior = brain_model.look_at(stimuli)
         assert isinstance(behavior, BehavioralAssembly)
         assert set(behavior['image_id'].values) == {'1', '2'}
         assert len(behavior['synset']) == 2
         assert behavior['synset'].values[0].startswith('n')
+
+    @pytest.mark.parametrize(['model_ctr'], [(pytorch_custom,)])
+    def test_choicelabels(self, model_ctr):
+        activations_model = model_ctr()
+        brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
+                                      layers=['relu1', 'relu2'], behavioral_readout_layer='relu2')
+        stimuli = self.mock_stimulus_set()
+        choice_labels = ['dog', 'cat', 'bear', 'bird']
+        brain_model.start_task(BrainModel.Task.label, choice_labels)
+        behavior = brain_model.look_at(stimuli)
+        assert isinstance(behavior, BehavioralAssembly)
+        assert set(behavior['image_id'].values) == {'1', '2'}
+        assert all(choice in choice_labels for choice in behavior.squeeze().values)
+        # these two labels do not make sense, but we're working with a random model
+        assert behavior.sel(image_id='1').values.item() == 'bear'
+        assert behavior.sel(image_id='2').values.item() == 'cat'
+
+    def mock_stimulus_set(self):
+        stimuli = StimulusSet({'image_id': ['1', '2'], 'filename': ['rgb1', 'rgb2']})
+        stimuli.image_paths = {'1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
+                               '2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
+        stimuli.identifier = 'TestLabelBehavior.rgb_1_2'
+        return stimuli
 
 
 class TestProbabilitiesMapping:
