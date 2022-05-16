@@ -42,11 +42,12 @@ class LabelBehavior(BrainModel):
     def look_at(self, stimuli, number_of_trials=1):
         assert self.current_task == BrainModel.Task.label
         logits = self.activations_model(stimuli, layers=['logits'])
-        return self.logits_to_choice(logits)
+        choices = self.logits_to_choice(logits)
+        return choices
 
     def logits_to_choice(self, logits):
         assert len(logits['neuroid']) == 1000
-        logits = logits.transpose('presentation', 'neuroid')
+        logits = logits.transpose(..., 'neuroid')  # move neuroid dimension last
         extra_coords = {}
         if self.choice_labels == 'imagenet':
             # assuming the model was already trained on those labels, we just need to convert to synsets
@@ -58,7 +59,7 @@ class LabelBehavior(BrainModel):
             extra_coords['logit'] = ('presentation', prediction_indices)
         else:
             probabilities = softmax(logits)
-            np.testing.assert_array_equal(probabilities.dims, ['presentation', 'neuroid'])
+            assert len(probabilities.dims) == 2 and probabilities.dims[-1] == 'neuroid'
             # map imagenet labels to target labels
             # from https://github.com/bethgelab/model-vs-human/blob/745046c4d82ff884af618756bd6a5f47b6f36c45/modelvshuman/datasets/decision_mappings.py#L30
             aggregated_class_probabilities = []
