@@ -192,8 +192,8 @@ def test_from_image_path(model_ctr, layers, image_name, pca_components, logits):
 def _build_stimulus_set(image_names):
     stimulus_set = StimulusSet([{'stimulus_id': image_name, 'some_meta': image_name[::-1]}
                                 for image_name in image_names])
-    stimulus_set.image_paths = {image_name: os.path.join(os.path.dirname(__file__), image_name)
-                                for image_name in image_names}
+    stimulus_set.stimulus_paths = {image_name: os.path.join(os.path.dirname(__file__), image_name)
+                                   for image_name in image_names}
     return stimulus_set
 
 

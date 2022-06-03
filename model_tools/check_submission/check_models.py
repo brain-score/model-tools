@@ -110,8 +110,8 @@ def get_assembly():
     labels = ['a'] * 10 + ['b'] * 10
     stimulus_set = StimulusSet([{'stimulus_id': image_names[i], 'object_name': 'a', 'image_label': labels[i]}
                                 for i in range(20)])
-    stimulus_set.image_paths = {image_name: os.path.join(os.path.dirname(__file__), image_name)
-                                for image_name in image_names}
+    stimulus_set.stimulus_paths = {image_name: os.path.join(os.path.dirname(__file__), image_name)
+                                   for image_name in image_names}
     stimulus_set.identifier = 'test'
     assembly.attrs['stimulus_set'] = stimulus_set
     assembly.attrs['stimulus_set_name'] = stimulus_set.identifier

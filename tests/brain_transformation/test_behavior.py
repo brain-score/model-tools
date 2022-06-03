@@ -77,8 +77,8 @@ class TestLabelBehavior:
 
     def mock_stimulus_set(self):
         stimuli = StimulusSet({'stimulus_id': ['1', '2'], 'filename': ['rgb1', 'rgb2']})
-        stimuli.image_paths = {'1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
-                               '2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
+        stimuli.stimulus_paths = {'1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
+                                  '2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
         stimuli.identifier = 'TestLabelBehavior.rgb_1_2'
         return stimuli
 
@@ -89,8 +89,8 @@ class TestProbabilitiesMapping:
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=None, behavioral_readout_layer='relu2')
         fitting_stimuli = StimulusSet({'stimulus_id': ['rgb1', 'rgb2'], 'image_label': ['label1', 'label2']})
-        fitting_stimuli.image_paths = {'rgb1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
-                                       'rgb2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
+        fitting_stimuli.stimulus_paths = {'rgb1': os.path.join(os.path.dirname(__file__), 'rgb1.jpg'),
+                                          'rgb2': os.path.join(os.path.dirname(__file__), 'rgb2.jpg')}
         fitting_stimuli.identifier = 'test_probabilities_mapping.creates_probabilities'
         fitting_stimuli = place_on_screen(fitting_stimuli, target_visual_degrees=brain_model.visual_degrees(),
                                           source_visual_degrees=8)
