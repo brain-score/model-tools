@@ -50,7 +50,7 @@ class TestLabelBehavior:
         activations_model = model_ctr()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=None, behavioral_readout_layer='dummy')  # not needed
-        stimuli = self.mock_stimulus_set()
+        stimuli = mock_stimulus_set()
         brain_model.start_task(BrainModel.Task.label, 'imagenet')
         behavior = brain_model.look_at(stimuli)
         assert isinstance(behavior, BehavioralAssembly)
