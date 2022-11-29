@@ -117,6 +117,17 @@ class LabelToImagenetIndices:
     oven_indices = [766]
     truck_indices = [555, 569, 656, 675, 717, 734, 864, 867]
 
+    # added for Baker 2022:
+    bear_indices = [294, 295, 296, 297]
+    cat_indices = [281, 282, 283, 284, 285]
+    elephant_indices = [101, 385, 386]
+    frog_indices = [30, 31, 32]
+    lizard_indices = [38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
+    bunny_indices = [330, 331, 332]
+    tiger_indices = [286, 287, 288, 289, 290, 291, 292, 293]
+    turtle_indices = [33, 34, 35, 36, 37]
+    wolf_indices = [269, 270, 271, 272, 273, 274, 275]
+
     @classmethod
     def label_to_indices(cls, label):
         synset_indices = getattr(cls, f"{label}_indices")
