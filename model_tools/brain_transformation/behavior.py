@@ -88,7 +88,7 @@ https://github.com/brain-score/candidate_models/blob/fa965c452bd17c6bfcca5b991fd
 class LabelToImagenetIndices:
     airplane_indices = [404]
     bear_indices = [294, 295, 296, 297]
-    bicycle_indices = [444, 671]
+    # bicycle_indices = [444, 671]
     bird_indices = [8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 22, 23,
                     24, 80, 81, 82, 83, 87, 88, 89, 90, 91, 92, 93,
                     94, 95, 96, 98, 99, 100, 127, 128, 129, 130, 131,
@@ -96,7 +96,7 @@ class LabelToImagenetIndices:
                     143, 144, 145]
     boat_indices = [472, 554, 625, 814, 914]
     bottle_indices = [440, 720, 737, 898, 899, 901, 907]
-    car_indices = [436, 511, 817]
+    #car_indices = [436, 511, 817]
     cat_indices = [281, 282, 283, 284, 285, 286]
     chair_indices = [423, 559, 765, 857]
     clock_indices = [409, 530, 892]
@@ -127,6 +127,13 @@ class LabelToImagenetIndices:
     tiger_indices = [286, 287, 288, 289, 290, 291, 292, 293]
     turtle_indices = [33, 34, 35, 36, 37]
     wolf_indices = [269, 270, 271, 272, 273, 274, 275]
+
+    # added for Zhu 2019:
+    aeroplane_indices = [404, 895]
+    car_indices = [407, 436, 468, 511, 609, 627, 656, 661, 751, 817]
+    motorbike_indices = [670, 665]
+    bicycle_indices = [444, 671]
+    bus_indices = [779, 874, 654]
 
     @classmethod
     def label_to_indices(cls, label):
