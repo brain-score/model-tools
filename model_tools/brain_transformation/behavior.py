@@ -87,7 +87,7 @@ https://github.com/brain-score/candidate_models/blob/fa965c452bd17c6bfcca5b991fd
 
 class LabelToImagenetIndices:
     airplane_indices = [404]
-    bear_indices = [294, 295, 296, 297]
+    #bear_indices = [294, 295, 296, 297]
     # bicycle_indices = [444, 671]
     bird_indices = [8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 22, 23,
                     24, 80, 81, 82, 83, 87, 88, 89, 90, 91, 92, 93,
@@ -97,7 +97,7 @@ class LabelToImagenetIndices:
     boat_indices = [472, 554, 625, 814, 914]
     bottle_indices = [440, 720, 737, 898, 899, 901, 907]
     #car_indices = [436, 511, 817]
-    cat_indices = [281, 282, 283, 284, 285, 286]
+    #cat_indices = [281, 282, 283, 284, 285, 286]
     chair_indices = [423, 559, 765, 857]
     clock_indices = [409, 530, 892]
     dog_indices = [152, 153, 154, 155, 156, 157, 158, 159, 160, 161,
@@ -111,7 +111,7 @@ class LabelToImagenetIndices:
                    235, 236, 237, 238, 239, 240, 241, 243, 244, 245,
                    246, 247, 248, 249, 250, 252, 253, 254, 255, 256,
                    257, 259, 261, 262, 263, 265, 266, 267, 268]
-    elephant_indices = [385, 386]
+    #elephant_indices = [385, 386]
     keyboard_indices = [508, 878]
     knife_indices = [499]
     oven_indices = [766]
