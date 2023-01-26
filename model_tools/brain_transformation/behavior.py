@@ -87,8 +87,8 @@ https://github.com/brain-score/candidate_models/blob/fa965c452bd17c6bfcca5b991fd
 
 class LabelToImagenetIndices:
     airplane_indices = [404]
-    #bear_indices = [294, 295, 296, 297]
-    # bicycle_indices = [444, 671]
+    bear_indices = [294, 295, 296, 297]
+    bicycle_indices = [444, 671]
     bird_indices = [8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 22, 23,
                     24, 80, 81, 82, 83, 87, 88, 89, 90, 91, 92, 93,
                     94, 95, 96, 98, 99, 100, 127, 128, 129, 130, 131,
@@ -96,8 +96,8 @@ class LabelToImagenetIndices:
                     143, 144, 145]
     boat_indices = [472, 554, 625, 814, 914]
     bottle_indices = [440, 720, 737, 898, 899, 901, 907]
-    #car_indices = [436, 511, 817]
-    #cat_indices = [281, 282, 283, 284, 285, 286]
+    car_indices = [436, 511, 817]
+    cat_indices = [281, 282, 283, 284, 285, 286]
     chair_indices = [423, 559, 765, 857]
     clock_indices = [409, 530, 892]
     dog_indices = [152, 153, 154, 155, 156, 157, 158, 159, 160, 161,
@@ -111,16 +111,16 @@ class LabelToImagenetIndices:
                    235, 236, 237, 238, 239, 240, 241, 243, 244, 245,
                    246, 247, 248, 249, 250, 252, 253, 254, 255, 256,
                    257, 259, 261, 262, 263, 265, 266, 267, 268]
-    #elephant_indices = [385, 386]
+    elephant_indices = [385, 386]
     keyboard_indices = [508, 878]
     knife_indices = [499]
     oven_indices = [766]
     truck_indices = [555, 569, 656, 675, 717, 734, 864, 867]
 
     # added for Baker 2022:
-    bear_indices = [294, 295, 296, 297]
-    cat_indices = [281, 282, 283, 284, 285]
-    elephant_indices = [101, 385, 386]
+    # cat and elephant (as used by Baker in paper) are below. Commented out for future reference.
+    # cat_indices = [281, 282, 283, 284, 285]
+    # elephant_indices = [101, 385, 386]
     frog_indices = [30, 31, 32]
     lizard_indices = [38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
     bunny_indices = [330, 331, 332]
@@ -129,10 +129,10 @@ class LabelToImagenetIndices:
     wolf_indices = [269, 270, 271, 272, 273, 274, 275]
 
     # added for Zhu 2019:
+    # car (as used by Zhu in paper) is below. Commented out for future reference.
     aeroplane_indices = [404, 895]
-    car_indices = [407, 436, 468, 511, 609, 627, 656, 661, 751, 817]
+    # car_indices = [407, 436, 468, 511, 609, 627, 656, 661, 751, 817]
     motorbike_indices = [670, 665]
-    bicycle_indices = [444, 671]
     bus_indices = [779, 874, 654]
 
     @classmethod
