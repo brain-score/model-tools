@@ -128,7 +128,7 @@ class LabelToImagenetIndices:
     turtle_indices = [33, 34, 35, 36, 37]
     wolf_indices = [269, 270, 271, 272, 273, 274, 275]
 
-    # added for Zhu 2019:
+    # added from Zhu et al. 2019:
     # car (as used by Zhu in paper) is below. Commented out for future reference.
     aeroplane_indices = [404, 895]
     # car_indices = [407, 436, 468, 511, 609, 627, 656, 661, 751, 817]
