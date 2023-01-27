@@ -117,7 +117,7 @@ class LabelToImagenetIndices:
     oven_indices = [766]
     truck_indices = [555, 569, 656, 675, 717, 734, 864, 867]
 
-    # added for Baker 2022:
+    # added from Baker et al. 2022:
     # cat and elephant (as used by Baker in paper) are below. Commented out for future reference.
     # cat_indices = [281, 282, 283, 284, 285]
     # elephant_indices = [101, 385, 386]
