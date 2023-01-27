@@ -118,7 +118,7 @@ class LabelToImagenetIndices:
     truck_indices = [555, 569, 656, 675, 717, 734, 864, 867]
 
     # added from Baker et al. 2022:
-    # cat and elephant (as used by Baker in paper) are below. Commented out for future reference.
+    # cat and elephant indices as defined in Baker et al. 2022 are not used, instead we stick to the definition by Geirhos et al. 2021.
     # cat_indices = [281, 282, 283, 284, 285]
     # elephant_indices = [101, 385, 386]
     frog_indices = [30, 31, 32]
