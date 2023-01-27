@@ -129,8 +129,8 @@ class LabelToImagenetIndices:
     wolf_indices = [269, 270, 271, 272, 273, 274, 275]
 
     # added from Zhu et al. 2019:
-    # car (as used by Zhu in paper) is below. Commented out for future reference.
     aeroplane_indices = [404, 895]
+    # car indices as defined in Zhu et al. 2019 are not used, instead we stick to the definition by Geirhos et al. 2021.
     # car_indices = [407, 436, 468, 511, 609, 627, 656, 661, 751, 817]
     motorbike_indices = [670, 665]
     bus_indices = [779, 874, 654]
