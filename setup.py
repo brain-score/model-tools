@@ -13,8 +13,8 @@ requirements = [
     "Pillow",
     "numpy",
     "tqdm",
-    "torch",
-    "torchvision",
+    "torch<=1.8.1",
+    "torchvision<=0.9.1",
     "tensorflow==1.15",
     "keras==2.3.1",
     "protobuf<4",  # keras import fails on newer protobuf http://braintree.mit.edu:8080/job/unittest_model_tools/132/
