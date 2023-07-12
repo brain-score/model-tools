@@ -3,7 +3,7 @@ from brainscore.benchmarks.public_benchmarks import FreemanZiembaV1PublicBenchma
 from brainscore.model_interface import BrainModel
 from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
-from .behavior import BehaviorArbiter, LabelBehavior, ProbabilitiesMapping
+from .behavior import BehaviorArbiter, LabelBehavior, ProbabilitiesMapping, OddOneOutBehavior
 from .neural import LayerMappedModel, LayerSelection, LayerScores
 
 STANDARD_REGION_BENCHMARKS = {
@@ -41,8 +41,10 @@ class ModelCommitment(BrainModel):
         behavioral_readout_layer = behavioral_readout_layer or layers[-1]
         probabilities_behavior = ProbabilitiesMapping(identifier=identifier, activations_model=activations_model,
                                                       layer=behavioral_readout_layer)
+        odd_one_out_behavior = OddOneOutBehavior(identifier=identifier, activations_model=activations_model)
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
-                                               BrainModel.Task.probabilities: probabilities_behavior})
+                                               BrainModel.Task.probabilities: probabilities_behavior,
+                                               BrainModel.Task.odd_one_out: odd_one_out_behavior})
         self.do_behavior = False
 
     def visual_degrees(self) -> int:

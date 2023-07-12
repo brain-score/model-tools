@@ -215,3 +215,34 @@ class ProbabilitiesMapping(BrainModel):
                 indices.append(label2index[label])
             index2label = OrderedDict((index, label) for label, index in label2index.items())
             return indices, index2label
+        
+
+class OddOneOutBehavior(BrainModel):
+    def __init__(self, identifier, activations_model, layer):
+        """
+        :param identifier: a string to identify the model
+        :param activations_model: the model from which to retrieve representations for stimuli
+        :param layer: the single behavioral readout layer or a list of layers to read out of.
+        """
+        self._identifier = identifier
+        self.activations_model = activations_model
+        self.readout = make_list(layer)
+        self.current_task = None
+
+    @property
+    def identifier(self):
+        return self._identifier
+
+    def start_task(self, task: BrainModel.Task):
+        assert task == BrainModel.Taskpairwise_similarities
+        self.current_task = task
+
+    def look_at(self, stimuli, number_of_trials=1):
+        assert self.current_task == BrainModel.Taskpairwise_similarities
+        features = self.activations_model(stimuli, layers=self.readout)
+        features = features.transpose('presentation', 'neuroid')
+        odd_one_out = your_clever_code_to_compute_similarities_from_features
+        # Note that `pairwise_similarities` should now be a `BehavioralAssembly`
+        # as specified in the BrainModel docstring, i.e. with `presentation_left` and `presentation_right` dims
+        # that each have a length of the number of stimuli.
+        return odd_one_out
