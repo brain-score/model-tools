@@ -241,8 +241,21 @@ class OddOneOutBehavior(BrainModel):
         assert self.current_task == BrainModel.Taskpairwise_similarities
         features = self.activations_model(stimuli, layers=self.readout)
         features = features.transpose('presentation', 'neuroid')
-        odd_one_out = your_clever_code_to_compute_similarities_from_features
-        # Note that `pairwise_similarities` should now be a `BehavioralAssembly`
-        # as specified in the BrainModel docstring, i.e. with `presentation_left` and `presentation_right` dims
-        # that each have a length of the number of stimuli.
+        odd_one_out = odd_one_out(features)
+        odd_one_out = BehavioralAssembly(odd_one_out, coords={None}, dims=[None])  # TODO
         return odd_one_out
+    
+    def odd_one_out(features, similarity_measure='dot'):
+        # First sketch
+        if similarity_measure == 'dot':
+            similarity_01 = np.dot(features[0], features[1])
+            similarity_02 = np.dot(features[0], features[2])
+            similarity_12 = np.dot(features[1], features[2])
+
+        max_similarity = max(similarity_01, similarity_02, similarity_12)
+        if max_similarity == similarity_01: 
+            return features[2].feature_id
+        elif max_similarity == similarity_02: 
+            return features[1].feature_id
+        else:
+            return features[0].feature_id
