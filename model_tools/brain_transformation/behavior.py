@@ -248,10 +248,10 @@ class OddOneOutBehavior(BrainModel):
         return odd_one_out
     
     def odd_one_out(self, features):
+        stimuli = features['stimulus_id'].values
         if self.similarity_measure == 'dot':
-            similarity_01 = np.dot(features[0], features[1])
-            similarity_02 = np.dot(features[0], features[2])
-            similarity_12 = np.dot(features[1], features[2])
+            similarity_values = np.einsum('ij,ij->i', features, np.roll(features, 1, axis=0))
+            similarities = DataAssembly(similarity_values, coords={'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
         elif self.similarity_measure == 'cosine':
             similarity_01 = cosine_similarity(features[0], features[1])
             similarity_02 = cosine_similarity(features[0], features[2])
