@@ -4,6 +4,7 @@ import numpy as np
 import os
 import sklearn.linear_model
 import sklearn.multioutput
+from sklearn.metrics.pairwise import cosine_similarity
 
 from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly
 from brainscore.model_interface import BrainModel
@@ -228,6 +229,7 @@ class OddOneOutBehavior(BrainModel):
         self.activations_model = activations_model
         self.readout = make_list(layer)
         self.current_task = None
+        self.simmilarity_measure = similarity_measure
 
     @property
     def identifier(self):
@@ -245,12 +247,18 @@ class OddOneOutBehavior(BrainModel):
         odd_one_out = BehavioralAssembly(odd_one_out, coords={None}, dims=[None])  # TODO
         return odd_one_out
     
-    def odd_one_out(features):
-        # First sketch
+    def odd_one_out(self, features):
         if self.similarity_measure == 'dot':
             similarity_01 = np.dot(features[0], features[1])
             similarity_02 = np.dot(features[0], features[2])
             similarity_12 = np.dot(features[1], features[2])
+        elif self.similarity_measure == 'cosine_similarity':
+            similarity_01 = cosine_similarity(features[0], features[1])
+            similarity_02 = cosine_similarity(features[0], features[2])
+            similarity_12 = cosine_similarity(features[1], features[2])
+        else:
+            # What should happen here?
+            pass
 
         max_similarity = max(similarity_01, similarity_02, similarity_12)
         if max_similarity == similarity_01: 
