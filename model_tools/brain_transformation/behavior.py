@@ -259,10 +259,7 @@ class OddOneOutBehavior(BrainModel):
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
-        max_similarity = max(similarity_01, similarity_02, similarity_12)
-        if max_similarity == similarity_01: 
-            return features[2].feature_id
-        elif max_similarity == similarity_02: 
-            return features[1].feature_id
-        else:
-            return features[0].feature_id
+        similar = similarities.idxmax()  # find which stimuli are most similar to one another
+        # the remaining stimuli of the triplet is the least similar one
+        odd_one_out = set(stimuli) - set([similar['stimulus_left'].item(), similar['stimulus_right'].item()])
+        return odd_one_out
