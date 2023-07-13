@@ -252,7 +252,7 @@ class OddOneOutBehavior(BrainModel):
             similarity_01 = np.dot(features[0], features[1])
             similarity_02 = np.dot(features[0], features[2])
             similarity_12 = np.dot(features[1], features[2])
-        elif self.similarity_measure == 'cosine_similarity':
+        elif self.similarity_measure == 'cosine':
             similarity_01 = cosine_similarity(features[0], features[1])
             similarity_02 = cosine_similarity(features[0], features[2])
             similarity_12 = cosine_similarity(features[1], features[2])
