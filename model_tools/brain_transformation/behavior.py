@@ -238,7 +238,7 @@ class OddOneOutBehavior(BrainModel):
         self.current_task = task
 
     def look_at(self, stimuli, number_of_trials=1):
-        assert self.current_task == BrainModel.Taskpairwise_similarities
+        assert self.current_task == BrainModel.Task.odd_one_out
         features = self.activations_model(stimuli, layers=self.readout)
         features = features.transpose('presentation', 'neuroid')
         odd_one_out = odd_one_out(features)
