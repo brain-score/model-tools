@@ -183,7 +183,7 @@ class TestOddOneOutBehavior:
         activations_model = pytorch_custom()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=None, behavioral_readout_layer='relu2')
-        fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3'], 'image_label': ['label1', 'label2', 'label23']})
+        fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3'], 'image_label': ['label1', 'label2', 'label3']})
         fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'image1.jpg'),
                                           'image2': os.path.join(os.path.dirname(__file__), 'image2.jpg'),
                                           'image3': os.path.join(os.path.dirname(__file__), 'image3.jpg')}
