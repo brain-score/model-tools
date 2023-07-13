@@ -41,7 +41,8 @@ class ModelCommitment(BrainModel):
         behavioral_readout_layer = behavioral_readout_layer or layers[-1]
         probabilities_behavior = ProbabilitiesMapping(identifier=identifier, activations_model=activations_model,
                                                       layer=behavioral_readout_layer)
-        odd_one_out_behavior = OddOneOutBehavior(identifier=identifier, activations_model=activations_model)
+        odd_one_out_behavior = OddOneOutBehavior(identifier=identifier, activations_model=activations_model,
+                                                                                    layer=behavioral_readout_layer)
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
                                                BrainModel.Task.probabilities: probabilities_behavior,
                                                BrainModel.Task.odd_one_out: odd_one_out_behavior})
