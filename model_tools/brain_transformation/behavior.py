@@ -6,7 +6,7 @@ import sklearn.linear_model
 import sklearn.multioutput
 from sklearn.metrics.pairwise import cosine_similarity
 
-from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly
+from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly, DataAssembly
 from brainscore.model_interface import BrainModel
 from model_tools.utils import make_list
 

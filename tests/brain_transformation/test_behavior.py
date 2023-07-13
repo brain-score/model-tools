@@ -176,3 +176,25 @@ class TestI2N:
         score = benchmark(transformation)
         score = score.sel(aggregation='center')
         assert score == approx(expected_score, abs=0.005), f"expected {expected_score}, but got {score}"
+
+
+class TestOddOneOutBehavior:
+    def test_fing_odd_one_out(self):
+        activations_model = pytorch_custom()
+        brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
+                                      layers=None, behavioral_readout_layer='relu2')
+        fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3'], 'image_label': ['label1', 'label2', 'label23']})
+        fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'image1.jpg'),
+                                          'image2': os.path.join(os.path.dirname(__file__), 'image2.jpg'),
+                                          'image3': os.path.join(os.path.dirname(__file__), 'image3.jpg')}
+        fitting_stimuli.identifier = 'test_odd_one_out_behavior.test_fing_odd_one_out'
+        #fitting_stimuli = place_on_screen(fitting_stimuli, target_visual_degrees=brain_model.visual_degrees(),
+        #                                  source_visual_degrees=8)
+        brain_model.start_task(BrainModel.Task.odd_one_out, fitting_stimuli)
+        odd_one_out = brain_model.look_at(fitting_stimuli)
+        np.testing.assert_array_equal(odd_one_out.dims, [None])
+        np.testing.assert_array_equal(odd_one_out.shape, [None])
+        np.testing.assert_array_almost_equal(odd_one_out.sel(stimulus_id=None, choice=None).values,
+                                             odd_one_out.sel(stimulus_id=None, choice=None).values)
+        assert odd_one_out.sel(stimulus_id=None, choice=None) + \
+               odd_one_out.sel(stimulus_id=None, choice=None) == approx(1)
