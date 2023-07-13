@@ -218,7 +218,7 @@ class ProbabilitiesMapping(BrainModel):
         
 
 class OddOneOutBehavior(BrainModel):
-    def __init__(self, identifier, activations_model, layer):
+    def __init__(self, identifier: str, activations_model, layer: Union[str, List[str]], similarity_measure: str = 'dot'):
         """
         :param identifier: a string to identify the model
         :param activations_model: the model from which to retrieve representations for stimuli
