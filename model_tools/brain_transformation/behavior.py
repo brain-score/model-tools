@@ -245,9 +245,9 @@ class OddOneOutBehavior(BrainModel):
         odd_one_out = BehavioralAssembly(odd_one_out, coords={None}, dims=[None])  # TODO
         return odd_one_out
     
-    def odd_one_out(features, similarity_measure='dot'):
+    def odd_one_out(features):
         # First sketch
-        if similarity_measure == 'dot':
+        if self.similarity_measure == 'dot':
             similarity_01 = np.dot(features[0], features[1])
             similarity_02 = np.dot(features[0], features[2])
             similarity_12 = np.dot(features[1], features[2])
