@@ -234,7 +234,7 @@ class OddOneOutBehavior(BrainModel):
         return self._identifier
 
     def start_task(self, task: BrainModel.Task):
-        assert task == BrainModel.Taskpairwise_similarities
+        assert task == BrainModel.Task.odd_one_out
         self.current_task = task
 
     def look_at(self, stimuli, number_of_trials=1):
