@@ -257,8 +257,7 @@ class OddOneOutBehavior(BrainModel):
             similarity_02 = cosine_similarity(features[0], features[2])
             similarity_12 = cosine_similarity(features[1], features[2])
         else:
-            # What should happen here?
-            pass
+            raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
         max_similarity = max(similarity_01, similarity_02, similarity_12)
         if max_similarity == similarity_01: 
