@@ -179,7 +179,13 @@ class TestI2N:
 
 
 class TestOddOneOutBehavior:
-    def test_fing_odd_one_out(self):
+    def test_validation_data(self):
+        validation_data = None
+        assert isinstance(validation_data, None) # DataAssembly
+        assert len(validation_data) == 470000
+        assert len(validation_data[0]) == 3
+
+    def test_find_odd_one_out(self):
         activations_model = pytorch_custom()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=None, behavioral_readout_layer='relu2')
@@ -198,3 +204,5 @@ class TestOddOneOutBehavior:
                                              odd_one_out.sel(stimulus_id=None, choice=None).values)
         assert odd_one_out.sel(stimulus_id=None, choice=None) + \
                odd_one_out.sel(stimulus_id=None, choice=None) == approx(1)
+
+    
