@@ -240,26 +240,37 @@ class OddOneOutBehavior(BrainModel):
         self.current_task = task
 
     def look_at(self, stimuli, number_of_trials=1):
+        self.number_of_stimuli = len(stimuli)
         assert self.current_task == BrainModel.Task.odd_one_out
         features = self.activations_model(stimuli, layers=self.readout)
         features = features.transpose('presentation', 'neuroid')
-        odd_one_out = odd_one_out(features)
-        odd_one_out = BehavioralAssembly(odd_one_out, coords={None}, dims=[None])  # TODO
-        return odd_one_out
+        similarity_matrix = similarity_matrix(features)
+        odd_one_out_predictions = odd_one_out(similarity_matrix)
+        odd_one_out_predictions = BehavioralAssembly(odd_one_out_predictions, coords={None}, dims=[None])  # TODO
+        return odd_one_out_predictions
     
-    def odd_one_out(self, features):
-        stimuli = features['stimulus_id'].values
+    def similarity_matrix(self, features):
+        stimuli = features['stimulus_id'].values 
         if self.similarity_measure == 'dot':
-            similarity_values = np.einsum('ij,ij->i', features, np.roll(features, 1, axis=0))
-            similarities = DataAssembly(similarity_values, coords={'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
+            similarity_matrix= np.matmul(stimuli, np.transpose(stimuli))
+            #How do I change this for the matrix?: similarities = DataAssembly(similarity_values, coords={'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
         elif self.similarity_measure == 'cosine':
-            similarity_01 = cosine_similarity(features[0], features[1])
-            similarity_02 = cosine_similarity(features[0], features[2])
-            similarity_12 = cosine_similarity(features[1], features[2])
+            #maybe we can use this: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html
+            #but it is only for sparse matrices, although I am not sure how important this is
+            pass
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
-        similar = similarities.idxmax()  # find which stimuli are most similar to one another
-        # the remaining stimuli of the triplet is the least similar one
-        odd_one_out = set(stimuli) - set([similar['stimulus_left'].item(), similar['stimulus_right'].item()])
-        return odd_one_out
+    def odd_one_out(self, similarity_matrix, triplets):
+        indices = sub2ind(triplets, self.number_of_stimuli, self.number_of_stimuli)
+        odd_one_out_predictions = []
+        for [i, j, k] in indices:        
+            similarities = None # TODO 
+            similar = similarities.idxmax()  # find which stimuli are most similar to one another
+            # the remaining stimuli of the triplet is the least similar one
+            odd_one_out_predictions.append(set(i, j, k) - set([similar['stimulus_left'].item(), similar['stimulus_right'].item()])) # TODO change to DataAssembly & 
+        return odd_one_out_predictions
+
+    def sub2ind(array_shape, rows, cols): 
+        ind = np.ix_(rows, cols)
+        return np.ravel_multi_index(ind, array_shape)
