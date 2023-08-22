@@ -245,7 +245,7 @@ class OddOneOutBehavior(BrainModel):
         features = self.activations_model(stimuli, layers=self.readout)
         features = features.transpose('presentation', 'neuroid')
         similarity_matrix = similarity_matrix(features)
-        odd_one_out_predictions = odd_one_out(similarity_matrix)
+        odd_one_out_predictions = self.odd_one_out(similarity_matrix)
         odd_one_out_predictions = BehavioralAssembly(odd_one_out_predictions, coords={None}, dims=[None])  # TODO
         return odd_one_out_predictions
     
@@ -262,13 +262,14 @@ class OddOneOutBehavior(BrainModel):
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
     def odd_one_out(self, similarity_matrix, triplets):
-        indices = sub2ind(triplets, self.number_of_stimuli, self.number_of_stimuli)
+        indices = self.sub2ind(triplets, self.number_of_stimuli, self.number_of_stimuli)
         odd_one_out_predictions = []
         for [i, j, k] in indices:        
-            similarities = None # TODO 
-            similar = similarities.idxmax()  # find which stimuli are most similar to one another
-            # the remaining stimuli of the triplet is the least similar one
-            odd_one_out_predictions.append(set(i, j, k) - set([similar['stimulus_left'].item(), similar['stimulus_right'].item()])) # TODO change to DataAssembly & 
+        #    similarities = [similarity_matrix[i, j], similarity_matrix[j, k], similarity_matrix[i, k],]
+        #    similar = similarities.idxmax()  # find which stimuli are most similar to one another
+        #    # the remaining stimuli of the triplet is the least similar one
+        #    odd_one_out_predictions.append(set(i, j, k) - set([similar['stimulus_left'].item(), similar['stimulus_right'].item()])) # TODO change to DataAssembly & 
+            odd_one_out_predictions.append(None)
         return odd_one_out_predictions
 
     def sub2ind(array_shape, rows, cols): 
