@@ -252,12 +252,18 @@ class OddOneOutBehavior(BrainModel):
     def similarity_matrix(self, features):
         stimuli = features['stimulus_id'].values 
         if self.similarity_measure == 'dot':
-            similarity_matrix= np.matmul(stimuli, np.transpose(stimuli))
-            #How do I change this for the matrix?: similarities = DataAssembly(similarity_values, coords={'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
+            dot_product = stimuli, np.transpose(stimuli)
+            # TODO: what is your preferred indentation?
+            similarity_matrix = DataAssembly(dot_product, coords={'stimulus_left': ('presentation', stimuli), 
+                                                          'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
+            return similarity_matrix
         elif self.similarity_measure == 'cosine':
-            #maybe we can use this: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html
-            #but it is only for sparse matrices, although I am not sure how important this is
-            pass
+            row_norms = np.linalg.norm(stimuli, axis=1).reshape(-1, 1)
+            norm_product = np.dot(row_norms, row_norms.T)
+            cosine_similarity = dot_product / norm_product
+            similarity_matrix = DataAssembly(cosine_similarity, coords={'stimulus_left': ('presentation', stimuli), 
+                                                          'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
+            return similarity_matrix
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
@@ -265,11 +271,9 @@ class OddOneOutBehavior(BrainModel):
         indices = self.sub2ind(triplets, self.number_of_stimuli, self.number_of_stimuli)
         odd_one_out_predictions = []
         for [i, j, k] in indices:        
-        #    similarities = [similarity_matrix[i, j], similarity_matrix[j, k], similarity_matrix[i, k],]
-        #    similar = similarities.idxmax()  # find which stimuli are most similar to one another
-        #    # the remaining stimuli of the triplet is the least similar one
-        #    odd_one_out_predictions.append(set(i, j, k) - set([similar['stimulus_left'].item(), similar['stimulus_right'].item()])) # TODO change to DataAssembly & 
-            odd_one_out_predictions.append(None)
+            similarities = np.array([similarity_matrix[j, k], similarity_matrix[i, j], similarity_matrix[i, k]])
+            odd_one_out = [i,j,k][similarities.idxmax()]
+            odd_one_out_predictions.append([i,j,k][similarities.idxmax()])
         return odd_one_out_predictions
 
     def sub2ind(array_shape, rows, cols): 
