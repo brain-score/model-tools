@@ -253,7 +253,6 @@ class OddOneOutBehavior(BrainModel):
         stimuli = features['stimulus_id'].values 
         if self.similarity_measure == 'dot':
             dot_product = stimuli, np.transpose(stimuli)
-            # TODO: what is your preferred indentation?
             similarity_matrix = DataAssembly(dot_product, coords={'stimulus_left': ('presentation', stimuli), 
                                                           'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
             return similarity_matrix
@@ -261,21 +260,18 @@ class OddOneOutBehavior(BrainModel):
             row_norms = np.linalg.norm(stimuli, axis=1).reshape(-1, 1)
             norm_product = np.dot(row_norms, row_norms.T)
             cosine_similarity = dot_product / norm_product
-            similarity_matrix = DataAssembly(cosine_similarity, coords={'stimulus_left': ('presentation', stimuli), 
-                                                          'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
+            similarity_matrix = DataAssembly(cosine_similarity, coords={
+                'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
             return similarity_matrix
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
-    def odd_one_out(self, similarity_matrix, triplets):
-        indices = self.sub2ind(triplets, self.number_of_stimuli, self.number_of_stimuli)
+    def odd_one_out(similarity_matrix, triplets):
         odd_one_out_predictions = []
-        for [i, j, k] in indices:        
-            similarities = np.array([similarity_matrix[j, k], similarity_matrix[i, j], similarity_matrix[i, k]])
-            odd_one_out = [i,j,k][similarities.idxmax()]
-            odd_one_out_predictions.append([i,j,k][similarities.idxmax()])
+        for [i, j, k] in triplets:        
+            sims = np.array([similarity_matrix[i, j], similarity_matrix[i, k], similarity_matrix[j, k]]).argmax()
+            idx = [i,j,k][2-sims.argmax()]
+            odd_one_out_predictions.append(idx)
         return odd_one_out_predictions
 
-    def sub2ind(array_shape, rows, cols): 
-        ind = np.ix_(rows, cols)
-        return np.ravel_multi_index(ind, array_shape)
+
