@@ -31,6 +31,7 @@ def check_brain_model_processing(model):
 
 def check_base_models(module):
     module = __import__(module)
+    assert len(module.get_model_list()) >= 1, 'No base models were specified!'
     for model in module.get_model_list():
         layers = module.get_layers(model)
         assert layers is not None
