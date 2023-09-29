@@ -11,6 +11,12 @@ STANDARD_REGION_BENCHMARKS = {
     'V2': LazyLoad(FreemanZiembaV2PublicBenchmark),
     'V4': LazyLoad(MajajHongV4PublicBenchmark),
     'IT': LazyLoad(MajajHongITPublicBenchmark),
+    'mV1v': LazyLoad(FreemanZiembaV1PublicBenchmark),
+    'mV2v': LazyLoad(FreemanZiembaV2PublicBenchmark),
+    'mV4': LazyLoad(MajajHongV4PublicBenchmark),
+    'hV1v': LazyLoad(FreemanZiembaV1PublicBenchmark),
+    'hV2v': LazyLoad(FreemanZiembaV2PublicBenchmark),
+    'hV4': LazyLoad(MajajHongV4PublicBenchmark)
 }
 
 
@@ -26,13 +32,14 @@ class ModelCommitment(BrainModel):
         self.layers = layers
         self.activations_model = activations_model
         self._visual_degrees = visual_degrees
-        # region-layer mapping
+        import pdb; pdb.set_trace()
         if region_layer_map is None:
             layer_selection = LayerSelection(model_identifier=identifier,
                                              activations_model=activations_model, layers=layers,
                                              visual_degrees=visual_degrees)
             region_layer_map = RegionLayerMap(layer_selection=layer_selection,
                                               region_benchmarks=STANDARD_REGION_BENCHMARKS)
+            region_layer_map['whole_brain'] = layers
         # neural
         layer_model = LayerMappedModel(identifier=identifier, activations_model=activations_model,
                                        region_layer_map=region_layer_map)
