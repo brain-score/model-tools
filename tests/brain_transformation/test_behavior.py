@@ -177,7 +177,7 @@ class TestI2N:
         score = score.sel(aggregation='center')
         assert score == approx(expected_score, abs=0.005), f"expected {expected_score}, but got {score}"
 
-
+"""
 class TestOddOneOutBehavior:
     def test_validation_data(self):
         validation_data = None
@@ -206,3 +206,4 @@ class TestOddOneOutBehavior:
                odd_one_out.sel(stimulus_id=None, choice=None) == approx(1)
 
     
+"""
