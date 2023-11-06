@@ -8,8 +8,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import Union, List
 
 from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly, DataAssembly
-from brainscore.model_interface import BrainModel
 from model_tools.utils import make_list
+
+import sys
+file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
+sys.path.append(file_path)
+from model_interface import BrainModel
 
 
 class BehaviorArbiter(BrainModel):
@@ -219,8 +223,8 @@ class ProbabilitiesMapping(BrainModel):
             return indices, index2label
         
 
-class OddOneOutBehavior(BrainModel):
-    def __init__(self, identifier: str, activations_model, layer: Union[str, List[str]], similarity_measure: str = 'dot'):
+class OddOneOut(BrainModel):
+    def __init__(self, identifier: str, activations_model, layer: Union[str, List[str]], similarity_measure: str = 'dot'):        
         """
         :param identifier: a string to identify the model
         :param activations_model: the model from which to retrieve representations for stimuli
@@ -229,8 +233,8 @@ class OddOneOutBehavior(BrainModel):
         self._identifier = identifier
         self.activations_model = activations_model
         self.readout = make_list(layer)
-        self.current_task = None
-        self.simmilarity_measure = similarity_measure
+        self.current_task = BrainModel.Task.odd_one_out
+        self.similarity_measure = similarity_measure
 
     @property
     def identifier(self):
@@ -240,37 +244,48 @@ class OddOneOutBehavior(BrainModel):
         assert task == BrainModel.Task.odd_one_out
         self.current_task = task
 
-    def look_at(self, stimuli, number_of_trials=1):
-        self.number_of_stimuli = len(stimuli)
+    def look_at(self, data, number_of_trials=1):
+        self.stimuli, self.triplets = data
+        self.number_of_stimuli = len(self.stimuli)
         assert self.current_task == BrainModel.Task.odd_one_out
-        features = self.activations_model(stimuli, layers=self.readout)
+        features = self.activations_model(self.stimuli, layers=self.readout)
         features = features.transpose('presentation', 'neuroid')
-        similarity_matrix = similarity_matrix(features)
-        odd_one_out_predictions = self.odd_one_out(similarity_matrix)
-        odd_one_out_predictions = BehavioralAssembly(odd_one_out_predictions, coords={None}, dims=[None])  # TODO
-        return odd_one_out_predictions
+        #print("features:", features.values)
+        similarity_matrix = self.similarity_matrix(features.values)
     
+        choices = self.odd_one_out(similarity_matrix)
+        
+        #coords = None
+        #return BehavioralAssembly([choices], coords=coords, dims=['choice', 'presentation'])
+        return choices
+
     def similarity_matrix(self, features):
-        stimuli = features['stimulus_id'].values 
         if self.similarity_measure == 'dot':
-            dot_product = stimuli, np.transpose(stimuli)
-            similarity_matrix = DataAssembly(dot_product, coords={'stimulus_left': ('presentation', stimuli), 
-                                                          'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
+            similarity_matrix = np.dot(features, np.transpose(features))
+
+            #similarity_matrix = DataAssembly( #
+            #    dot_product,
+            #    coords={'stimulus_left': ('presentation', stimulus_id), #stimuli), 
+            #            'stimulus_right': ('presentation', stimulus_id)}, #np.roll(stimuli, 1))}#, 
+            #    dims=['presentation']
+            #)
+            
             return similarity_matrix
-        elif self.similarity_measure == 'cosine':
-            row_norms = np.linalg.norm(stimuli, axis=1).reshape(-1, 1)
-            norm_product = np.dot(row_norms, row_norms.T)
-            cosine_similarity = dot_product / norm_product
-            similarity_matrix = DataAssembly(cosine_similarity, coords={
-                'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
-            return similarity_matrix
+        
+        #elif self.similarity_measure == 'cosine':
+        #    row_norms = np.linalg.norm(stimuli, axis=1).reshape(-1, 1)
+        #    norm_product = np.dot(row_norms, row_norms.T)
+        #    cosine_similarity = dot_product / norm_product
+        #    similarity_matrix = DataAssembly(cosine_similarity, coords={
+        #        'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
+        #    return similarity_matrix
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
-    def odd_one_out(similarity_matrix, triplets):
+    def odd_one_out(self, similarity_matrix):
         odd_one_out_predictions = []
-        for [i, j, k] in triplets:        
-            sims = np.array([similarity_matrix[i, j], similarity_matrix[i, k], similarity_matrix[j, k]]).argmax()
+        for [i, j, k] in self.triplets:        
+            sims = np.array([similarity_matrix[i, j], similarity_matrix[i, k], similarity_matrix[j, k]]).argmax() # ???
             idx = [i,j,k][2-sims.argmax()]
             odd_one_out_predictions.append(idx)
         return odd_one_out_predictions

@@ -11,7 +11,16 @@ from brainio.stimuli import StimulusSet
 from brainscore.benchmarks.rajalingham2018 import _DicarloRajalingham2018
 from brainscore.benchmarks.screen import place_on_screen
 from brainscore.metrics.image_level_behavior import I2n
-from brainscore.model_interface import BrainModel
+
+import sys
+file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
+sys.path.append(file_path)
+from model_interface import BrainModel
+
+
+import sys
+file_path = "/Users/linussommer/Documents/GitHub/model-tools"
+sys.path.append(file_path)
 from model_tools.activations import PytorchWrapper
 from model_tools.brain_transformation import ModelCommitment, ProbabilitiesMapping
 
@@ -177,33 +186,26 @@ class TestI2N:
         score = score.sel(aggregation='center')
         assert score == approx(expected_score, abs=0.005), f"expected {expected_score}, but got {score}"
 
-"""
-class TestOddOneOutBehavior:
-    def test_validation_data(self):
-        validation_data = None
-        assert isinstance(validation_data, None) # DataAssembly
-        assert len(validation_data) == 470000
-        assert len(validation_data[0]) == 3
 
-    def test_find_odd_one_out(self):
+class TestOddOneOut:
+    def test_odd_one_out(self):
         activations_model = pytorch_custom()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
-                                      layers=None, behavioral_readout_layer='relu2')
+                                      layers=[None], behavioral_readout_layer='relu2')
         fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3'], 'image_label': ['label1', 'label2', 'label3']})
-        fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'image1.jpg'),
-                                          'image2': os.path.join(os.path.dirname(__file__), 'image2.jpg'),
-                                          'image3': os.path.join(os.path.dirname(__file__), 'image3.jpg')}
-        fitting_stimuli.identifier = 'test_odd_one_out_behavior.test_fing_odd_one_out'
-        #fitting_stimuli = place_on_screen(fitting_stimuli, target_visual_degrees=brain_model.visual_degrees(),
-        #                                  source_visual_degrees=8)
-        brain_model.start_task(BrainModel.Task.odd_one_out, fitting_stimuli)
-        odd_one_out = brain_model.look_at(fitting_stimuli)
-        np.testing.assert_array_equal(odd_one_out.dims, [None])
-        np.testing.assert_array_equal(odd_one_out.shape, [None])
-        np.testing.assert_array_almost_equal(odd_one_out.sel(stimulus_id=None, choice=None).values,
-                                             odd_one_out.sel(stimulus_id=None, choice=None).values)
-        assert odd_one_out.sel(stimulus_id=None, choice=None) + \
-               odd_one_out.sel(stimulus_id=None, choice=None) == approx(1)
+        fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'airboat.jpg'),
+                                          'image2': os.path.join(os.path.dirname(__file__), 'aircraft_carrier.jpg'),
+                                          'image3': os.path.join(os.path.dirname(__file__), 'aloe.jpg')}
+        fitting_stimuli.identifier = 'test_odd_one_out.test_odd_one_out'
+        fitting_stimuli = place_on_screen(fitting_stimuli, target_visual_degrees=brain_model.visual_degrees(),
+                                          source_visual_degrees=8) # needs to be 8 for some reason
+        
+        brain_model.start_task(BrainModel.Task.odd_one_out)
+        data = [fitting_stimuli, [[0, 1, 2]]]
+        odd_one_out = brain_model.look_at(data)
+        assert odd_one_out == [2]
 
-    
-"""
+        # TODO add test for real scores
+
+test = TestOddOneOut()
+test.test_odd_one_out()

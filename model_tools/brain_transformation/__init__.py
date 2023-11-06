@@ -1,10 +1,14 @@
 from brainscore.benchmarks.public_benchmarks import FreemanZiembaV1PublicBenchmark, FreemanZiembaV2PublicBenchmark, \
     MajajHongV4PublicBenchmark, MajajHongITPublicBenchmark
-from brainscore.model_interface import BrainModel
 from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
-from .behavior import BehaviorArbiter, LabelBehavior, ProbabilitiesMapping, OddOneOutBehavior
+from .behavior import BehaviorArbiter, LabelBehavior, ProbabilitiesMapping, OddOneOut
 from .neural import LayerMappedModel, LayerSelection, LayerScores
+
+import sys
+file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
+sys.path.append(file_path)
+from model_interface import BrainModel
 
 STANDARD_REGION_BENCHMARKS = {
     'V1': LazyLoad(FreemanZiembaV1PublicBenchmark),
@@ -41,11 +45,11 @@ class ModelCommitment(BrainModel):
         behavioral_readout_layer = behavioral_readout_layer or layers[-1]
         probabilities_behavior = ProbabilitiesMapping(identifier=identifier, activations_model=activations_model,
                                                       layer=behavioral_readout_layer)
-        odd_one_out_behavior = OddOneOutBehavior(identifier=identifier, activations_model=activations_model,
+        odd_one_out = OddOneOut(identifier=identifier, activations_model=activations_model,
                                                                                     layer=behavioral_readout_layer)
         self.behavior_model = BehaviorArbiter({BrainModel.Task.label: logits_behavior,
                                                BrainModel.Task.probabilities: probabilities_behavior,
-                                               BrainModel.Task.odd_one_out: odd_one_out_behavior})
+                                               BrainModel.Task.odd_one_out: odd_one_out})
         self.do_behavior = False
 
     def visual_degrees(self) -> int:
