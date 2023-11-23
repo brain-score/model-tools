@@ -225,7 +225,7 @@ class ProbabilitiesMapping(BrainModel):
         
 
 class OddOneOut(BrainModel):
-    def __init__(self, identifier: str, activations_model, layer: Union[str, List[str]], similarity_measure: str = 'dot'):        
+    def __init__(self, identifier: str, activations_model, layer: Union[str, List[str]]):        
         """
         :param identifier: a string to identify the model
         :param activations_model: the model from which to retrieve representations for stimuli
@@ -235,20 +235,20 @@ class OddOneOut(BrainModel):
         self.activations_model = activations_model
         self.readout = make_list(layer)
         self.current_task = BrainModel.Task.odd_one_out
-        self.similarity_measure = similarity_measure
 
     @property
     def identifier(self):
         return self._identifier
 
-    def start_task(self, task: BrainModel.Task):
+    def start_task(self, task: BrainModel.Task, similarity_measure: str = 'dot'):
         assert task == BrainModel.Task.odd_one_out
         self.current_task = task
+        self.similarity_measure = similarity_measure
 
     def look_at(self, data, number_of_trials=1):
         self.stimuli, self.triplets = data
         self.number_of_stimuli = len(self.stimuli)
-        assert self.current_task == BrainModel.Task.odd_one_ou
+        assert self.current_task == BrainModel.Task.odd_one_out
 
         features = self.activations_model(self.stimuli, layers=self.readout) 
         features = features.transpose('presentation', 'neuroid')
@@ -272,16 +272,14 @@ class OddOneOut(BrainModel):
             #    dims=['presentation']
             #)
             
-            print(similarity_matrix)
             return similarity_matrix
         
-        #elif self.similarity_measure == 'cosine':
-        #    row_norms = np.linalg.norm(stimuli, axis=1).reshape(-1, 1)
-        #    norm_product = np.dot(row_norms, row_norms.T)
-        #    cosine_similarity = dot_product / norm_product
-        #    similarity_matrix = DataAssembly(cosine_similarity, coords={
-        #        'stimulus_left': ('presentation', stimuli), 'stimulus_right': ('presentation', np.roll(stimuli, 1))}, dims=['presentation'])
-        #    return similarity_matrix
+        elif self.similarity_measure == 'cosine':
+            row_norms = np.linalg.norm(features, axis=1).reshape(-1, 1)
+            norm_product = np.dot(row_norms, row_norms.T)
+            dot_product = np.dot(features, np.transpose(features))
+            cosine_similarity = dot_product / norm_product
+            return cosine_similarity
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
