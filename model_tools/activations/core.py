@@ -74,7 +74,7 @@ class ActivationsExtractorHelper:
         activations = self._expand_paths(activations, original_paths=stimuli_paths)
         return activations
 
-    @store_xarray(identifier_ignore=['stimuli_paths', 'layers'], combine_fields={'layers': 'layer'})
+    # @store_xarray(identifier_ignore=['stimuli_paths', 'layers'], combine_fields={'layers': 'layer'})
     def _from_paths_stored(self, identifier, layers, stimuli_identifier, stimuli_paths):
         return self._from_paths(layers=layers, stimuli_paths=stimuli_paths)
 
@@ -214,6 +214,7 @@ class ActivationsExtractorHelper:
                   'model': ('neuroid', [self.identifier] * activations.shape[1]),
                   'layer': ('neuroid', [layer] * activations.shape[1]),
                   }
+        
         if flatten_coord_names:
             flatten_coords = {flatten_coord_names[i]: [sample_index[i] if i < flatten_indices.shape[1] else np.nan
                                                        for sample_index in flatten_indices]

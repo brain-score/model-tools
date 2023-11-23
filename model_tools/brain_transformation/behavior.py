@@ -5,6 +5,7 @@ import os
 import sklearn.linear_model
 import sklearn.multioutput
 from sklearn.metrics.pairwise import cosine_similarity
+
 from typing import Union, List
 
 from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly, DataAssembly
@@ -247,16 +248,17 @@ class OddOneOut(BrainModel):
     def look_at(self, data, number_of_trials=1):
         self.stimuli, self.triplets = data
         self.number_of_stimuli = len(self.stimuli)
-        assert self.current_task == BrainModel.Task.odd_one_out
-        features = self.activations_model(self.stimuli, layers=self.readout)
+        assert self.current_task == BrainModel.Task.odd_one_ou
+
+        features = self.activations_model(self.stimuli, layers=self.readout) 
         features = features.transpose('presentation', 'neuroid')
-        #print("features:", features.values)
         similarity_matrix = self.similarity_matrix(features.values)
-    
-        choices = self.odd_one_out(similarity_matrix)
+        choices = self.choices(similarity_matrix)
         
-        #coords = None
-        #return BehavioralAssembly([choices], coords=coords, dims=['choice', 'presentation'])
+        #coords = [f'triplet_{i}' for i in range(len(self.triplets))]
+        #return BehavioralAssembly({'stimulus_id': ['image1', 'image2', 'image3', 'image4', 'image5'], 
+        #                            'image_label': ['label1', 'label2', 'label3', 'label4', 'label5']}], 
+        #        coords=coords, dims=['choice', 'presentation'])
         return choices
 
     def similarity_matrix(self, features):
@@ -270,6 +272,7 @@ class OddOneOut(BrainModel):
             #    dims=['presentation']
             #)
             
+            print(similarity_matrix)
             return similarity_matrix
         
         #elif self.similarity_measure == 'cosine':
@@ -282,12 +285,12 @@ class OddOneOut(BrainModel):
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
-    def odd_one_out(self, similarity_matrix):
-        odd_one_out_predictions = []
+    def choices(self, similarity_matrix):
+        choice_predictions = []
         for [i, j, k] in self.triplets:        
-            sims = np.array([similarity_matrix[i, j], similarity_matrix[i, k], similarity_matrix[j, k]]).argmax() # ???
+            sims = np.array([similarity_matrix[i, j], similarity_matrix[i, k], similarity_matrix[j, k]])
             idx = [i,j,k][2-sims.argmax()]
-            odd_one_out_predictions.append(idx)
-        return odd_one_out_predictions
+            choice_predictions.append(idx)
+        return choice_predictions
 
 

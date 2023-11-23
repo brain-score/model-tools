@@ -192,19 +192,25 @@ class TestOddOneOut:
         activations_model = pytorch_custom()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=[None], behavioral_readout_layer='relu2')
-        fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3'], 'image_label': ['label1', 'label2', 'label3']})
-        fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'airboat.jpg'),
-                                          'image2': os.path.join(os.path.dirname(__file__), 'aircraft_carrier.jpg'),
-                                          'image3': os.path.join(os.path.dirname(__file__), 'aloe.jpg')}
+        
+        fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3', 'image4', 'image5'], 
+                                    'image_label': ['label1', 'label2', 'label3', 'label4', 'label5']}) 
+        fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'airboat.jpg'),         # stimulus_id =  8
+                                        'image2': os.path.join(os.path.dirname(__file__), 'aircraft_carrier.jpg'),  # stimulus_id =  9
+                                        'image3': os.path.join(os.path.dirname(__file__), 'aloe.jpg'),              # stimulus_id = 14
+                                        'image4': os.path.join(os.path.dirname(__file__), 'basil.jpg'),             # stimulus_id = 14
+                                        'image5': os.path.join(os.path.dirname(__file__), 'garbage.jpg')}           # stimulus_id = 81       
         fitting_stimuli.identifier = 'test_odd_one_out.test_odd_one_out'
         fitting_stimuli = place_on_screen(fitting_stimuli, target_visual_degrees=brain_model.visual_degrees(),
-                                          source_visual_degrees=8) # needs to be 8 for some reason
-        
-        brain_model.start_task(BrainModel.Task.odd_one_out)
-        data = [fitting_stimuli, [[0, 1, 2]]]
-        odd_one_out = brain_model.look_at(data)
-        assert odd_one_out == [2]
+                                            source_visual_degrees=8) 
 
+        brain_model.start_task(BrainModel.Task.odd_one_out)
+        data = [fitting_stimuli, [[0,1,2], [1,2,0], [2,1,0], [2,3,4]]] 
+        choices = brain_model.look_at(data)
+
+        assert len(choices) == 4
+        assert choices[0] == choices[1] == choices[2]
+        
         # TODO add test for real scores
 
 test = TestOddOneOut()
