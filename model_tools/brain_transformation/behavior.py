@@ -285,7 +285,7 @@ class OddOneOut(BrainModel):
 
     def choices(self, similarity_matrix):
         choice_predictions = []
-        for [i, j, k] in self.triplets:        
+        for [i,j,k] in self.triplets:    
             sims = np.array([similarity_matrix[i, j], similarity_matrix[i, k], similarity_matrix[j, k]])
             idx = [i,j,k][2-sims.argmax()]
             choice_predictions.append(idx)

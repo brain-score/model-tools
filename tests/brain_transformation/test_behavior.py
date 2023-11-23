@@ -194,7 +194,7 @@ class TestOddOneOut:
                                       layers=[None], behavioral_readout_layer='relu2')
         
         fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3', 'image4', 'image5'], 
-                                    'image_label': ['label1', 'label2', 'label3', 'label4', 'label5']}) 
+                                    'image_id': [8, 9, 14, 81, 665],}) 
         fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'airboat.jpg'),         
                                         'image2': os.path.join(os.path.dirname(__file__), 'aircraft_carrier.jpg'),  
                                         'image3': os.path.join(os.path.dirname(__file__), 'aloe.jpg'),              
@@ -213,6 +213,6 @@ class TestOddOneOut:
 
         test_similarity_measure(brain_model, fitting_stimuli, BrainModel.Task.odd_one_out, similarity_measure='cosine')
         test_similarity_measure(brain_model, fitting_stimuli, BrainModel.Task.odd_one_out, similarity_measure='dot')
-       
+
 test = TestOddOneOut()
 test.test_odd_one_out()
