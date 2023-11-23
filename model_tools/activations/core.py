@@ -74,7 +74,7 @@ class ActivationsExtractorHelper:
         activations = self._expand_paths(activations, original_paths=stimuli_paths)
         return activations
 
-    # @store_xarray(identifier_ignore=['stimuli_paths', 'layers'], combine_fields={'layers': 'layer'})
+    @store_xarray(identifier_ignore=['stimuli_paths', 'layers'], combine_fields={'layers': 'layer'})
     def _from_paths_stored(self, identifier, layers, stimuli_identifier, stimuli_paths):
         return self._from_paths(layers=layers, stimuli_paths=stimuli_paths)
 
