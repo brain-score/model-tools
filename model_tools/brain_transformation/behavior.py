@@ -252,26 +252,13 @@ class OddOneOut(BrainModel):
 
         features = self.activations_model(self.stimuli, layers=self.readout) 
         features = features.transpose('presentation', 'neuroid')
-        similarity_matrix = self.similarity_matrix(features.values)
-        choices = self.choices(similarity_matrix)
-        
-        #coords = [f'triplet_{i}' for i in range(len(self.triplets))]
-        #return BehavioralAssembly({'stimulus_id': ['image1', 'image2', 'image3', 'image4', 'image5'], 
-        #                            'image_label': ['label1', 'label2', 'label3', 'label4', 'label5']}], 
-        #        coords=coords, dims=['choice', 'presentation'])
+        similarity_matrix = self.calculate_similarity_matrix(features.values)
+        choices = self.calculate_choices(similarity_matrix)
         return choices
 
-    def similarity_matrix(self, features):
+    def calculate_similarity_matrix(self, features):
         if self.similarity_measure == 'dot':
             similarity_matrix = np.dot(features, np.transpose(features))
-
-            #similarity_matrix = DataAssembly( #
-            #    dot_product,
-            #    coords={'stimulus_left': ('presentation', stimulus_id), #stimuli), 
-            #            'stimulus_right': ('presentation', stimulus_id)}, #np.roll(stimuli, 1))}#, 
-            #    dims=['presentation']
-            #)
-            
             return similarity_matrix
         
         elif self.similarity_measure == 'cosine':
@@ -283,11 +270,12 @@ class OddOneOut(BrainModel):
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
-    def choices(self, similarity_matrix):
+    def calculate_choices(self, similarity_matrix):
         choice_predictions = []
-        for [i,j,k] in self.triplets:    
-            sims = np.array([similarity_matrix[i, j], similarity_matrix[i, k], similarity_matrix[j, k]])
-            idx = [i,j,k][2-sims.argmax()]
+        for triplet in self.triplets:
+            i, j, k = triplet
+            sims = similarity_matrix[[i, i, j], [j, k, k]]
+            idx = triplet[2 - np.argmax(sims)]
             choice_predictions.append(idx)
         return choice_predictions
 

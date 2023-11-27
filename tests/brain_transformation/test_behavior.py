@@ -15,6 +15,7 @@ from brainscore.metrics.image_level_behavior import I2n
 import sys
 file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
 sys.path.append(file_path)
+import brainscore
 from model_interface import BrainModel
 
 
@@ -192,27 +193,26 @@ class TestOddOneOut:
         activations_model = pytorch_custom()
         brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
                                       layers=[None], behavioral_readout_layer='relu2')
+                
+        assy = brainscore.get_assembly(f'Hebart2023')
+
+        triplets = [assy.coords["image_1"].values, assy.coords["image_2"].values, assy.coords["image_3"].values]
+        triplets = np.array(triplets).T
+
+        fitting_stimuli = place_on_screen(stimulus_set=assy.stimulus_set, 
+                                          target_visual_degrees=brain_model.visual_degrees(),
+                                          source_visual_degrees=8) 
         
-        fitting_stimuli = StimulusSet({'stimulus_id': ['image1', 'image2', 'image3', 'image4', 'image5'], 
-                                    'image_id': [8, 9, 14, 81, 665],}) 
-        fitting_stimuli.stimulus_paths = {'image1': os.path.join(os.path.dirname(__file__), 'airboat.jpg'),         
-                                        'image2': os.path.join(os.path.dirname(__file__), 'aircraft_carrier.jpg'),  
-                                        'image3': os.path.join(os.path.dirname(__file__), 'aloe.jpg'),              
-                                        'image4': os.path.join(os.path.dirname(__file__), 'basil.jpg'),             
-                                        'image5': os.path.join(os.path.dirname(__file__), 'garbage.jpg')}           
-        fitting_stimuli.identifier = 'test_odd_one_out.test_odd_one_out'
-        fitting_stimuli = place_on_screen(fitting_stimuli, target_visual_degrees=brain_model.visual_degrees(),
-                                            source_visual_degrees=8) 
-
-        def test_similarity_measure(brain_model, fitting_stimuli, task, similarity_measure):
-            brain_model.start_task(task, similarity_measure=similarity_measure)
-            data = [fitting_stimuli, [[0, 1, 2], [1, 2, 0], [2, 1, 0], [2, 3, 4]]]
+        for similarity_measure in ['dot', 'cosine']:
+            brain_model.start_task(BrainModel.Task.odd_one_out, similarity_measure=similarity_measure)
+            data = [fitting_stimuli, triplets]
             choices = brain_model.look_at(data)
-            assert len(choices) == 4
-            assert choices[0] == choices[1] == choices[2]
+            correct_choices = choices == triplets[:, 2]
 
-        test_similarity_measure(brain_model, fitting_stimuli, BrainModel.Task.odd_one_out, similarity_measure='cosine')
-        test_similarity_measure(brain_model, fitting_stimuli, BrainModel.Task.odd_one_out, similarity_measure='dot')
+            assert len(choices) == len(triplets)
+            assert isinstance(choices[0], np.int64)
+            assert 0.34 < np.sum(correct_choices)/len(choices) < 0.36
+
 
 test = TestOddOneOut()
 test.test_odd_one_out()
