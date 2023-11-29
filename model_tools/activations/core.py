@@ -1,5 +1,7 @@
 import copy
 import os
+import cv2
+import tempfile
 
 import functools
 import logging
