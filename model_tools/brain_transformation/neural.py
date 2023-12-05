@@ -24,6 +24,27 @@ class LayerMappedModel(BrainModel):
         return self._identifier
 
     def look_at(self, stimuli, number_of_trials=1, model_requirements: Optional[Dict[str, List]] = None):
+        """
+        :param model_requirements: a dictionary containing any requirements a benchmark might have for models, e.g.
+            microsaccades for getting variable responses from non-stochastic models to the same stimuli.
+
+            model_requirements['microsaccades']: list of tuples of x and y shifts to apply to each image to model
+            microsaccades. Note that the shifts happen in pixel space of the original input image, not the preprocessed
+            image.
+            Human microsaccade amplitude varies by who you ask, an estimate might be <0.1 deg = 360 arcsec = 6arcmin.
+            The goal of microsaccades is to obtain multiple different neural activities to the same input stimulus
+            from non-stochastic models. This is to improve estimates of e.g. psychophysical functions, but also other
+            things.
+            Example usage:
+                model_requirements = {'microsaccades': [(0, 0), (0, 1), (1, 0), (1, 1)]}
+            More information:
+            --> Rolfs 2009 "Microsaccades: Small steps on a long way" Vision Research, Volume 49, Issue 20, 15
+            October 2009, Pages 2415-2441.
+            --> Haddad & Steinmann 1973 "The smallest voluntary saccade: Implications for fixation" Vision
+            Research Volume 13, Issue 6, June 1973, Pages 1075-1086, IN5-IN6.
+            Huge thanks to Johannes Mehrer for the implementation of microsaccades in the Brain-Score core.py and
+            neural.py files.
+        """
         layer_regions = {}
         for region in self.recorded_regions:
             layers = self.region_layer_map[region]

@@ -48,6 +48,9 @@ class ActivationsExtractorHelper:
             The goal of microsaccades is to obtain multiple different neural activities to the same input stimulus
             from non-stochastic models. This is to improve estimates of e.g. psychophysical functions, but also other
             things.
+            Example usage:
+                model_requirements = {'microsaccades': [(0, 0), (0, 1), (1, 0), (1, 1)]}
+            More information:
             --> Rolfs 2009 "Microsaccades: Small steps on a long way" Vision Research, Volume 49, Issue 20, 15
             October 2009, Pages 2415-2441.
             --> Haddad & Steinmann 1973 "The smallest voluntary saccade: Implications for fixation" Vision
