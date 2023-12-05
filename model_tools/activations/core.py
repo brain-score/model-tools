@@ -184,7 +184,7 @@ class ActivationsExtractorHelper:
         :param shifts: a list of tuples containing the pixel shifts to apply to the paths.
         """
         runs_per_image = len(shifts)
-        batch_size = batch_size // runs_per_image
+        batch_size = max(batch_size // runs_per_image, 1)
         layer_activations = None
         for batch_start in tqdm(range(0, len(paths), batch_size), unit_scale=batch_size, desc="activations"):
             batch_end = min(batch_start + batch_size, len(paths))
