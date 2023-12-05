@@ -47,7 +47,8 @@ class ActivationsExtractorHelper:
             Human microsaccade amplitude varies by who you ask, an estimate might be <0.1 deg = 360 arcsec = 6arcmin.
             The goal of microsaccades is to obtain multiple different neural activities to the same input stimulus
             from non-stochastic models. This is to improve estimates of e.g. psychophysical functions, but also other
-            things.
+            things. Note that microsaccades are also applied to stochastic models to make them comparable within-
+            benchmark to non-stochastic models.
             Example usage:
                 model_requirements = {'microsaccades': [(0, 0), (0, 1), (1, 0), (1, 1)]}
             More information:
@@ -179,6 +180,9 @@ class ActivationsExtractorHelper:
         return layer_activations
 
     def _get_microsaccade_activations_batched(self, paths, layers, batch_size, shifts):
+        """
+        :param shifts: a list of tuples containing the pixel shifts to apply to the paths.
+        """
         runs_per_image = len(shifts)
         batch_size = batch_size // runs_per_image
         layer_activations = None

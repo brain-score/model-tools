@@ -195,7 +195,7 @@ def test_from_image_path(model_ctr, layers, image_name, pca_components, logits):
 @pytest.mark.parametrize(["model_ctr", "layers"], models_layers)
 @pytest.mark.parametrize("shifts", [[(2, 2), (0, 0), (1, -1), (0, 1)], [(0, 1), (2, 3)]])
 def test_microsaccades_from_image_path(model_ctr, layers, image_name, shifts):
-    stimulus_paths = [os.path.join(os.path.dirname(__file__), image_name)]  # Replace with a suitable test image
+    stimulus_paths = [os.path.join(os.path.dirname(__file__), image_name)]
     activations_extractor = model_ctr()
 
     model_requirements = {'microsaccades': shifts}
@@ -212,7 +212,7 @@ def test_microsaccades_from_image_path(model_ctr, layers, image_name, shifts):
 @pytest.mark.parametrize(["model_ctr", "layers"], models_layers)
 @pytest.mark.parametrize("model_requirements", [None, {'microsaccades': [(0, 0), (1, -1)]}])
 def test_model_requirements(model_ctr, layers, image_name, model_requirements):
-    stimulus_paths = [os.path.join(os.path.dirname(__file__), image_name)]  # Replace with a suitable test image
+    stimulus_paths = [os.path.join(os.path.dirname(__file__), image_name)]
     activations_extractor = model_ctr()
 
     activations_with_req = activations_extractor(stimuli=stimulus_paths, layers=layers,
@@ -233,7 +233,7 @@ def test_model_requirements(model_ctr, layers, image_name, model_requirements):
 @pytest.mark.parametrize(["model_ctr", "layers"], models_layers)
 def test_temporary_file_handling(model_ctr, layers, image_name):
     import tempfile
-    stimulus_paths = [os.path.join(os.path.dirname(__file__), image_name)]  # Replace with a suitable test image
+    stimulus_paths = [os.path.join(os.path.dirname(__file__), image_name)]
     activations_extractor = model_ctr()
     model_requirements = {'microsaccades': [(2, 2)]}
 
@@ -241,7 +241,7 @@ def test_temporary_file_handling(model_ctr, layers, image_name):
     temp_files = [f for f in os.listdir(tempfile.gettempdir()) if f.startswith('temp') and f.endswith('.png')]
 
     assert activations is not None
-    assert len(temp_files) == 0  # No temporary files should remain
+    assert len(temp_files) == 0
 
 
 def _build_stimulus_set(image_names):
