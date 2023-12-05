@@ -152,7 +152,7 @@ class ActivationsExtractorHelper:
         return handle
 
     def _get_activations_with_model_requirements(self, paths, layers, model_requirements):
-        if 'microsaccades' in model_requirements.keys():
+        if model_requirements is not None and 'microsaccades' in model_requirements.keys():
             return self._get_microsaccade_activations_batched(paths, layers=layers, batch_size=self._batch_size,
                                                               shifts=model_requirements['microsaccades'])
         return self._get_activations_batched(paths, layers=layers, batch_size=self._batch_size)
@@ -279,7 +279,7 @@ class ActivationsExtractorHelper:
         return model_assembly
 
     def _package_layer(self, layer_activations, layer, stimuli_paths, model_requirements):
-        if 'microsaccades' in model_requirements.keys():
+        if model_requirements is not None and 'microsaccades' in model_requirements.keys():
             runs_per_image = len(model_requirements['microsaccades'])
             stimuli_paths = np.repeat(stimuli_paths, runs_per_image)
         else:
@@ -364,7 +364,7 @@ def lstrip_local(path):
 
 
 def attach_stimulus_set_meta(assembly, stimulus_set, model_requirements):
-    if 'microsaccades' in model_requirements.keys():
+    if model_requirements is not None and 'microsaccades' in model_requirements.keys():
         return attach_stimulus_set_meta_with_microsaccades(assembly, stimulus_set, model_requirements)
     stimulus_paths = [str(stimulus_set.get_stimulus(stimulus_id)) for stimulus_id in stimulus_set['stimulus_id']]
     stimulus_paths = [lstrip_local(path) for path in stimulus_paths]
