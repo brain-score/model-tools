@@ -153,6 +153,7 @@ class ActivationsExtractorHelper:
 
     def _get_activations_with_model_requirements(self, paths, layers, model_requirements):
         if model_requirements is not None and 'microsaccades' in model_requirements.keys():
+            assert len(model_requirements['microsaccades'] > 0)
             return self._get_microsaccade_activations_batched(paths, layers=layers, batch_size=self._batch_size,
                                                               shifts=model_requirements['microsaccades'])
         return self._get_activations_batched(paths, layers=layers, batch_size=self._batch_size)
