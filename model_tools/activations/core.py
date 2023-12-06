@@ -289,10 +289,10 @@ class ActivationsExtractorHelper:
     def _package_layer(self, layer_activations, layer, stimuli_paths, model_requirements):
         if model_requirements is not None and 'microsaccades' in model_requirements.keys():
             runs_per_image = len(model_requirements['microsaccades'])
-            stimuli_paths = np.repeat(stimuli_paths, runs_per_image)
         else:
             runs_per_image = 1
         assert layer_activations.shape[0] == len(stimuli_paths) * runs_per_image
+        stimuli_paths = np.repeat(stimuli_paths, runs_per_image)
         activations, flatten_indices = flatten(layer_activations, return_index=True)  # collapse for single neuroid dim
         flatten_coord_names = None
         if flatten_indices.shape[1] == 1:  # fully connected, e.g. classifier
