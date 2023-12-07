@@ -6,6 +6,7 @@ import xarray as xr
 from pathlib import Path
 from pytest import approx
 
+import brainscore
 from brainio.assemblies import BehavioralAssembly
 from brainio.stimuli import StimulusSet
 from brainscore.benchmarks.rajalingham2018 import _DicarloRajalingham2018
