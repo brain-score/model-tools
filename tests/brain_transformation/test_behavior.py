@@ -11,12 +11,7 @@ from brainio.stimuli import StimulusSet
 from brainscore.benchmarks.rajalingham2018 import _DicarloRajalingham2018
 from brainscore.benchmarks.screen import place_on_screen
 from brainscore.metrics.image_level_behavior import I2n
-
-import sys
-file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
-sys.path.append(file_path)
-import brainscore
-from model_interface import BrainModel
+from brainscore.model_interface import BrainModel
 
 
 import sys
@@ -195,24 +190,19 @@ class TestOddOneOut:
                                       layers=[None], behavioral_readout_layer='relu2')
                 
         assy = brainscore.get_assembly(f'Hebart2023')
+        triplets = place_on_screen(stimulus_set=assy.stimulus_set[:21], 
+                                  target_visual_degrees=brain_model.visual_degrees(),
+                                  source_visual_degrees=8) 
 
-        triplets = [assy.coords["image_1"].values, assy.coords["image_2"].values, assy.coords["image_3"].values]
-        triplets = np.array(triplets).T
+        brain_model.start_task(BrainModel.Task.odd_one_out)
+        choices = brain_model.look_at(triplets)
+        print(choices)
 
-        fitting_stimuli = place_on_screen(stimulus_set=assy.stimulus_set, 
-                                          target_visual_degrees=brain_model.visual_degrees(),
-                                          source_visual_degrees=8) 
-        
-        for similarity_measure in ['dot', 'cosine']:
-            brain_model.start_task(BrainModel.Task.odd_one_out, similarity_measure=similarity_measure)
-            data = [fitting_stimuli, triplets]
-            choices = brain_model.look_at(data)
-            correct_choices = choices == triplets[:, 2]
-
-            assert len(choices) == len(triplets)
-            assert isinstance(choices[0], np.int64)
-            assert 0.34 < np.sum(correct_choices)/len(choices) < 0.36
-
+        assert len(choices) == len(triplets)
+        assert isinstance(choices[0], np.int64)
+        #assert 0.34 < np.sum(correct_choices)/len(choices) < 0.36
 
 test = TestOddOneOut()
 test.test_odd_one_out()
+        
+

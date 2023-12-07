@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 import os
+import pandas as pd
 import sklearn.linear_model
 import sklearn.multioutput
 from sklearn.metrics.pairwise import cosine_similarity
@@ -10,11 +11,7 @@ from typing import Union, List
 
 from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly, DataAssembly
 from model_tools.utils import make_list
-
-import sys
-file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
-sys.path.append(file_path)
-from model_interface import BrainModel
+from brainscore.model_interface import BrainModel
 
 
 class BehaviorArbiter(BrainModel):
@@ -235,27 +232,34 @@ class OddOneOut(BrainModel):
         self.activations_model = activations_model
         self.readout = make_list(layer)
         self.current_task = BrainModel.Task.odd_one_out
+        self.similarity_measure = 'dot' 
 
     @property
     def identifier(self):
         return self._identifier
 
-    def start_task(self, task: BrainModel.Task, similarity_measure: str = 'dot'):
+    def start_task(self, task: BrainModel.Task):
         assert task == BrainModel.Task.odd_one_out
         self.current_task = task
-        self.similarity_measure = similarity_measure
 
-    def look_at(self, data, number_of_trials=1):
-        self.stimuli, self.triplets = data
-        self.number_of_stimuli = len(self.stimuli)
-        assert self.current_task == BrainModel.Task.odd_one_out
-
-        features = self.activations_model(self.stimuli, layers=self.readout) 
+    def look_at(self, triplets, number_of_trials=1):
+        stimuli = self.unique_stimuli(triplets)
+        triplets = np.array(triplets["filename"]).reshape(-1, 3)
+        features = self.activations_model(stimuli, layers=self.readout) 
         features = features.transpose('presentation', 'neuroid')
         similarity_matrix = self.calculate_similarity_matrix(features.values)
-        choices = self.calculate_choices(similarity_matrix)
+        choices = self.calculate_choices(similarity_matrix, triplets)
         return choices
-
+    
+    def unique_stimuli(self, triplets):
+        """Returns a dataframe with unique stimuli."""
+        cols = triplets.columns
+        unique_ids = np.unique(triplets["stimulus_id"])
+        unique_triplets = pd.DataFrame(columns=cols)
+        for id in unique_ids:
+            unique_triplets = unique_triplets.append(triplets.loc[triplets["stimulus_id"] == id].iloc[0])
+        return pd.DataFrame(unique_triplets, columns=cols)
+    
     def calculate_similarity_matrix(self, features):
         if self.similarity_measure == 'dot':
             similarity_matrix = np.dot(features, np.transpose(features))
@@ -270,9 +274,9 @@ class OddOneOut(BrainModel):
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
 
-    def calculate_choices(self, similarity_matrix):
+    def calculate_choices(self, similarity_matrix, triplets):
         choice_predictions = []
-        for triplet in self.triplets:
+        for triplet in triplets:
             i, j, k = triplet
             sims = similarity_matrix[[i, i, j], [j, k, k]]
             idx = triplet[2 - np.argmax(sims)]
