@@ -214,7 +214,6 @@ class ActivationsExtractorHelper:
                   'model': ('neuroid', [self.identifier] * activations.shape[1]),
                   'layer': ('neuroid', [layer] * activations.shape[1]),
                   }
-        
         if flatten_coord_names:
             flatten_coords = {flatten_coord_names[i]: [sample_index[i] if i < flatten_indices.shape[1] else np.nan
                                                        for sample_index in flatten_indices]
