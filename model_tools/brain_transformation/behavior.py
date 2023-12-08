@@ -5,7 +5,6 @@ import os
 import pandas as pd
 import sklearn.linear_model
 import sklearn.multioutput
-from sklearn.metrics.pairwise import cosine_similarity
 from typing import Union, List
 from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly, DataAssembly
 from model_tools.utils import make_list
