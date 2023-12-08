@@ -4,10 +4,9 @@ from brainscore.utils import LazyLoad
 from model_tools.brain_transformation.temporal import TemporalIgnore
 from .behavior import BehaviorArbiter, LabelBehavior, ProbabilitiesMapping, OddOneOut
 from .neural import LayerMappedModel, LayerSelection, LayerScores
-
-import sys
-file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
-sys.path.append(file_path)
+#import sys
+#file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
+#sys.path.append(file_path)
 from model_interface import BrainModel
 
 STANDARD_REGION_BENCHMARKS = {
