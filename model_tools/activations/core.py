@@ -246,7 +246,7 @@ class ActivationsExtractorHelper:
 
     def _pad(self, batch_images, batch_size, runs_per_image=1):
         num_images = len(batch_images)
-        if (num_images * runs_per_image) % batch_size == 0:
+        if ((num_images * runs_per_image) % batch_size == 0) or num_images < batch_size:
             return batch_images, 0
         num_padding = batch_size * runs_per_image - (num_images % (batch_size * runs_per_image))
         padding = np.repeat(batch_images[-runs_per_image:], repeats=num_padding, axis=0)
