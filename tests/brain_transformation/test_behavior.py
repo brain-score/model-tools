@@ -13,10 +13,8 @@ from brainscore.benchmarks.rajalingham2018 import _DicarloRajalingham2018
 from brainscore.benchmarks.screen import place_on_screen
 from brainscore.metrics.image_level_behavior import I2n
 from brainscore.model_interface import BrainModel
-
-
-import sys
-file_path = "/Users/linussommer/Documents/GitHub/model-tools"
+#import sys
+#file_path = "/Users/linussommer/Documents/GitHub/model-tools"
 sys.path.append(file_path)
 from model_tools.activations import PytorchWrapper
 from model_tools.brain_transformation import ModelCommitment, ProbabilitiesMapping
