@@ -230,7 +230,8 @@ class ActivationsExtractorHelper:
             temp_file_paths.append(fp)
         preprocessed_images = self.preprocess(temp_file_paths)
         for temp_file_path in temp_file_paths:
-            os.remove(temp_file_path)
+            # os.remove(temp_file_path)
+            pass
         return preprocessed_images
 
     def translate_image(self, image_path: str, shift: np.array) -> str:
@@ -305,11 +306,14 @@ class ActivationsExtractorHelper:
             self._logger.debug(f"Unknown layer activations shape {layer_activations.shape}, not inferring channels")
 
         # build assembly
-        coords = {'stimulus_path': stimuli_paths,
-                  'neuroid_num': ('neuroid', list(range(activations.shape[1]))),
-                  'model': ('neuroid', [self.identifier] * activations.shape[1]),
-                  'layer': ('neuroid', [layer] * activations.shape[1]),
-                  }
+        if model_requirements is not None and 'microsaccades' in model_requirements.keys():
+            coords = self.build_microsaccade_coords(activations, layer, stimuli_paths, model_requirements)
+        else:
+            coords = {'stimulus_path': stimuli_paths,
+                      'neuroid_num': ('neuroid', list(range(activations.shape[1]))),
+                      'model': ('neuroid', [self.identifier] * activations.shape[1]),
+                      'layer': ('neuroid', [layer] * activations.shape[1]),
+                      }
         if flatten_coord_names:
             flatten_coords = {flatten_coord_names[i]: [sample_index[i] if i < flatten_indices.shape[1] else np.nan
                                                        for sample_index in flatten_indices]
@@ -320,6 +324,16 @@ class ActivationsExtractorHelper:
             layer_assembly[coord].values for coord in ['model', 'layer', 'neuroid_num']])]
         layer_assembly['neuroid_id'] = 'neuroid', neuroid_id
         return layer_assembly
+
+    def build_microsaccade_coords(self, activations, layer, stimuli_paths, model_requirements):
+        coords = {'stimulus_path': stimuli_paths,
+                  'neuroid_num': ('neuroid', list(range(activations.shape[1]))),
+                  'model': ('neuroid', [self.identifier] * activations.shape[1]),
+                  'layer': ('neuroid', [layer] * activations.shape[1]),
+                  'shift_x': ('stimulus_path', [element[0] for element in model_requirements['microsaccades']]),
+                  'shift_y': ('stimulus_path', [element[1] for element in model_requirements['microsaccades']])
+                  }
+        return coords
 
     def insert_attrs(self, wrapper):
         wrapper.from_stimulus_set = self.from_stimulus_set
