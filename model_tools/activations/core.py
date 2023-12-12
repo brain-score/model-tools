@@ -183,28 +183,36 @@ class ActivationsExtractorHelper:
         """
         :param shifts: a list of tuples containing the pixel shifts to apply to the paths.
         """
-        runs_per_image = len(shifts)
-        batch_size = max(batch_size // runs_per_image, 1)
-        layer_activations = None
+        layer_activations = OrderedDict()
         for batch_start in tqdm(range(0, len(paths), batch_size), unit_scale=batch_size, desc="activations"):
             batch_end = min(batch_start + batch_size, len(paths))
             batch_inputs = paths[batch_start:batch_end]
-            batch_activations = self._get_microsaccade_batch_activations(batch_inputs,
-                                                                         layer_names=layers,
-                                                                         batch_size=batch_size,
-                                                                         runs_per_image=runs_per_image,
-                                                                         shifts=shifts)
-            # copy to avoid handle re-enabling messing with the loop
+
+            batch_activations = OrderedDict()
+            # compute activations on the entire batch one shift at a time
+            for shift in shifts:
+                assert type(shift) == tuple
+                shifted_batch = self.translate_and_preprocess(batch_inputs, shift)
+                activations = self.get_activations(shifted_batch, layers)
+                for layer_name, layer_output in activations.items():
+                    batch_activations.setdefault(layer_name, []).append(layer_output)
+
+            # concatenate all shifts into this batch
+            for layer_name, layer_outputs in batch_activations.items():
+                batch_activations[layer_name] = np.concatenate(layer_outputs)
+
             for hook in self._batch_activations_hooks.copy().values():
                 batch_activations = hook(batch_activations)
 
-            if layer_activations is None:
-                layer_activations = copy.copy(batch_activations)
-            else:
-                for layer_name, layer_output in batch_activations.items():
-                    layer_activations[layer_name] = np.concatenate((layer_activations[layer_name], layer_output))
+            # add this batch to layer_activations
+            for layer_name, layer_output in batch_activations.items():
+                layer_activations.setdefault(layer_name, []).append(layer_output)
 
-        return layer_activations
+        # fast concat all batches
+        for layer_name, layer_outputs in layer_activations.items():
+            layer_activations[layer_name] = np.concatenate(layer_outputs)
+
+        return layer_activations  # this is all batches
 
     def _get_batch_activations(self, inputs, layer_names, batch_size):
         inputs, num_padding = self._pad(inputs, batch_size)
@@ -214,42 +222,30 @@ class ActivationsExtractorHelper:
         activations = self._unpad(activations, num_padding)
         return activations
 
-    def _get_microsaccade_batch_activations(self, inputs, layer_names, batch_size, runs_per_image, shifts):
-        inputs, num_padding = self._pad(inputs, batch_size, runs_per_image)
-        preprocessed_inputs = self.translate_and_preprocess(inputs, shifts)
-        activations = self.get_activations(preprocessed_inputs,
-                                           layer_names)  # img0_run0, img1_run0, img1_run1, img1_run1
-        assert isinstance(activations, OrderedDict)
-        activations = self._unpad(activations, num_padding)
-        return activations
-
-    def translate_and_preprocess(self, images, shifts):
-        """
-        Saves translated file to disc temporarily to be able to use the exact same preprocessing
-        as if image was not shifted (i.e. as if microsaccades were not considered).
-        """
-        preprocessed_images = []
+    def translate_and_preprocess(self, images, shift):
+        assert type(images) == list
+        temp_file_paths = []
         for image_path in images:
-            temp_files = []
-            try:
-                for shift in shifts:
-                    translated_image = self.translate(cv2.imread(image_path), shift)
-                    fp = tempfile.mkstemp(suffix=".png")[1]
-                    temp_files.append(fp)
-                    cv2.imwrite(fp, translated_image)
-                preprocessed_images.extend(self.preprocess(temp_files))
-            finally:
-                for fp in temp_files:
-                    os.remove(fp)
-
+            fp = self.translate_image(image_path, shift)
+            temp_file_paths.append(fp)
+        preprocessed_images = self.preprocess(temp_file_paths)
+        for temp_file_path in temp_file_paths:
+            os.remove(temp_file_path)
         return preprocessed_images
 
-    def _pad(self, batch_images, batch_size, runs_per_image=1):
+    def translate_image(self, image_path: str, shift: np.array) -> str:
+        """Translates and saves a temporary image to temporary_fp."""
+        translated_image = self.translate(cv2.imread(image_path), shift)
+        temporary_fp = tempfile.mkstemp(suffix=".png")[1]
+        cv2.imwrite(temporary_fp, translated_image)
+        return temporary_fp
+
+    def _pad(self, batch_images, batch_size):
         num_images = len(batch_images)
-        if ((num_images * runs_per_image) % batch_size == 0) or num_images < batch_size:
+        if num_images % batch_size == 0:
             return batch_images, 0
-        num_padding = batch_size * runs_per_image - (num_images % (batch_size * runs_per_image))
-        padding = np.repeat(batch_images[-runs_per_image:], repeats=num_padding, axis=0)
+        num_padding = batch_size - (num_images % batch_size)
+        padding = np.repeat(batch_images[-1:], repeats=num_padding, axis=0)
         return np.concatenate((batch_images, padding)), num_padding
 
     def _unpad(self, layer_activations, num_padding):
