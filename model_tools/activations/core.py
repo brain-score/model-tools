@@ -230,8 +230,7 @@ class ActivationsExtractorHelper:
             temp_file_paths.append(fp)
         preprocessed_images = self.preprocess(temp_file_paths)
         for temp_file_path in temp_file_paths:
-            # os.remove(temp_file_path)
-            pass
+            os.remove(temp_file_path)
         return preprocessed_images
 
     def translate_image(self, image_path: str, shift: np.array) -> str:
