@@ -7,7 +7,7 @@ from .neural import LayerMappedModel, LayerSelection, LayerScores
 #import sys
 #file_path = "/Users/linussommer/Documents/GitHub/brain-score/brainscore"
 #sys.path.append(file_path)
-from model_interface import BrainModel
+from brainscore.model_interface import BrainModel
 
 STANDARD_REGION_BENCHMARKS = {
     'V1': LazyLoad(FreemanZiembaV1PublicBenchmark),
