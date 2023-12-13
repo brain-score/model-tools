@@ -202,7 +202,8 @@ def test_microsaccades_from_image_path(model_ctr, layers, image_name, shifts):
     activations = activations_extractor(stimuli=stimulus_paths, layers=layers, model_requirements=model_requirements)
 
     assert activations is not None
-    assert 'shift_x' in activations.coords and 'shift_y' in activations.coords
+    assert list(activations['shift_x'].values) == [shift[0] for shift in shifts]
+    assert list(activations['shift_y'].values) == [shift[1] for shift in shifts]
     assert len(activations['shift_x']) == len(shifts) * len(stimulus_paths)
     assert len(activations['shift_y']) == len(shifts) * len(stimulus_paths)
 
