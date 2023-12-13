@@ -98,9 +98,12 @@ class ActivationsExtractorHelper:
         # In case stimuli paths are duplicates (e.g. multiple trials), we first reduce them to only the paths that need
         # to be run individually, compute activations for those, and then expand the activations to all paths again.
         # This is done here, before storing, so that we only store the reduced activations.
-        reduced_paths = self._reduce_paths(stimuli_paths)
-        activations = fnc(layers=layers, stimuli_paths=reduced_paths, model_requirements=model_requirements)
-        activations = self._expand_paths(activations, original_paths=stimuli_paths)
+        if model_requirements is not None and 'microsaccades' in model_requirements.keys():
+            activations = fnc(layers=layers, stimuli_paths=stimuli_paths, model_requirements=model_requirements)
+        else:
+            reduced_paths = self._reduce_paths(stimuli_paths)
+            activations = fnc(layers=layers, stimuli_paths=reduced_paths, model_requirements=model_requirements)
+            activations = self._expand_paths(activations, original_paths=stimuli_paths)
         return activations
 
     @store_xarray(identifier_ignore=['stimuli_paths', 'layers'], combine_fields={'layers': 'layer'})
@@ -125,7 +128,7 @@ class ActivationsExtractorHelper:
         sorted_x = activations_paths[argsort_indices]
         sorted_index = np.searchsorted(sorted_x, original_paths)
         index = [argsort_indices[i] for i in sorted_index]
-        return activations[{'stimulus_path': index}]
+        return activations[{'presentation': index}]
 
     def register_batch_activations_hook(self, hook):
         r"""
@@ -273,9 +276,11 @@ class ActivationsExtractorHelper:
             for coord in neuroid_coords:
                 neuroid_coords[coord][1] = np.concatenate((neuroid_coords[coord][1], layer_assembly[coord].values))
             assert layer_assemblies[0].dims == layer_assembly.dims
-            for dim in set(layer_assembly.dims) - {'neuroid'}:
-                for coord in layer_assembly[dim].coords:
-                    assert (layer_assembly[coord].values == nonneuroid_coords[coord][1]).all()
+            for coord, dims, values in walk_coords(layer_assembly):
+                if set(dims) == {'neuroid'}:
+                    continue
+                assert (values == nonneuroid_coords[coord][1]).all()
+
         neuroid_coords = {coord: (dims_values[0], dims_values[1])  # re-package as tuple instead of list for xarray
                           for coord, dims_values in neuroid_coords.items()}
         model_assembly = type(layer_assemblies[0])(model_assembly, coords={**nonneuroid_coords, **neuroid_coords},
@@ -308,30 +313,33 @@ class ActivationsExtractorHelper:
         if model_requirements is not None and 'microsaccades' in model_requirements.keys():
             coords = self.build_microsaccade_coords(activations, layer, stimuli_paths, model_requirements)
         else:
-            coords = {'stimulus_path': stimuli_paths,
+            coords = {'stimulus_path': ('presentation', stimuli_paths),
+                      'stimulus_path2': ('presentation', stimuli_paths),  # to avoid DataAssembly dim collapse
                       'neuroid_num': ('neuroid', list(range(activations.shape[1]))),
                       'model': ('neuroid', [self.identifier] * activations.shape[1]),
                       'layer': ('neuroid', [layer] * activations.shape[1]),
                       }
+
         if flatten_coord_names:
             flatten_coords = {flatten_coord_names[i]: [sample_index[i] if i < flatten_indices.shape[1] else np.nan
                                                        for sample_index in flatten_indices]
                               for i in range(len(flatten_coord_names))}
             coords = {**coords, **{coord: ('neuroid', values) for coord, values in flatten_coords.items()}}
-        layer_assembly = NeuroidAssembly(activations, coords=coords, dims=['stimulus_path', 'neuroid'])
+        layer_assembly = NeuroidAssembly(activations, coords=coords, dims=['presentation', 'neuroid'])
         neuroid_id = [".".join([f"{value}" for value in values]) for values in zip(*[
             layer_assembly[coord].values for coord in ['model', 'layer', 'neuroid_num']])]
         layer_assembly['neuroid_id'] = 'neuroid', neuroid_id
         return layer_assembly
 
     def build_microsaccade_coords(self, activations, layer, stimuli_paths, model_requirements):
-        coords = {'stimulus_path': stimuli_paths,
-                  'neuroid_num': ('neuroid', list(range(activations.shape[1]))),
-                  'model': ('neuroid', [self.identifier] * activations.shape[1]),
-                  'layer': ('neuroid', [layer] * activations.shape[1]),
-                  'shift_x': ('stimulus_path', [element[0] for element in model_requirements['microsaccades']]),
-                  'shift_y': ('stimulus_path', [element[1] for element in model_requirements['microsaccades']])
-                  }
+        coords = {
+            'stimulus_path': ('presentation', stimuli_paths),
+            'shift_x': ('presentation', [shift[0] for shift in model_requirements['microsaccades']]),
+            'shift_y': ('presentation', [shift[1] for shift in model_requirements['microsaccades']]),
+            'neuroid_num': ('neuroid', list(range(activations.shape[1]))),
+            'model': ('neuroid', [self.identifier] * activations.shape[1]),
+            'layer': ('neuroid', [layer] * activations.shape[1]),
+        }
         return coords
 
     def insert_attrs(self, wrapper):
