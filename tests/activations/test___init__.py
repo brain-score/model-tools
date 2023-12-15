@@ -224,9 +224,8 @@ def test_model_requirements(model_ctr, layers, image_name, model_requirements):
     assert activations_with_req is not None
     assert activations_without_req is not None
     if model_requirements:
-        assert len(activations_with_req['neuroid']) > len(activations_without_req['neuroid'])
-    else:
-        assert len(activations_with_req['neuroid']) == len(activations_without_req['neuroid'])
+        assert len(activations_with_req['presentation']) > len(activations_without_req['presentation'])
+    assert len(activations_with_req['neuroid']) == len(activations_without_req['neuroid'])
 
 
 @pytest.mark.parametrize("image_name", ['rgb.jpg', 'grayscale.png', 'grayscale2.jpg', 'grayscale_alpha.png',
