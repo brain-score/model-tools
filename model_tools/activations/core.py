@@ -10,6 +10,7 @@ from multiprocessing.pool import ThreadPool
 
 import numpy as np
 from tqdm.auto import tqdm
+import xarray as xr
 
 from brainio.assemblies import NeuroidAssembly, walk_coords
 from brainio.stimuli import StimulusSet
@@ -396,12 +397,20 @@ def attach_stimulus_set_meta(assembly, stimulus_set, model_requirements):
     assembly_paths = [lstrip_local(path) for path in assembly['stimulus_path'].values]
 
     assert (np.array(assembly_paths) == np.array(stimulus_paths)).all()
-    assembly['stimulus_path'] = stimulus_set['stimulus_id'].values
+    assembly = assembly.reset_index('presentation')
+    assembly.assign_coords(stimulus_path=('presentation', stimulus_set['stimulus_id'].values))
+
     assembly = assembly.rename({'stimulus_path': 'stimulus_id'})
 
+    all_columns = []
     for column in stimulus_set.columns:
-        assembly[column] = 'stimulus_id', stimulus_set[column].values
-    assembly = assembly.stack(presentation=('stimulus_id',))
+        assembly = assembly.assign_coords({column: ('presentation', stimulus_set[column].values)})
+        all_columns.append(column)
+    if 'stimulus_id' in all_columns:
+        all_columns.remove('stimulus_id')
+    if 'stimulus_path2' in all_columns:
+        all_columns.remove('stimulus_path2')
+    assembly = assembly.set_index(presentation=['stimulus_id', 'stimulus_path2'] + all_columns)
     return assembly
 
 
@@ -410,30 +419,36 @@ def attach_stimulus_set_meta_with_microsaccades(assembly, stimulus_set, model_re
     stimulus_paths = [lstrip_local(path) for path in stimulus_paths]
     assembly_paths = [lstrip_local(path) for path in assembly['stimulus_path'].values]
 
-    replication_factor = len(model_requirements['microsaccades']) if model_requirements['microsaccades'] else 1
+    replication_factor = len(model_requirements['microsaccades'])
     repeated_stimulus_paths = np.repeat(stimulus_paths, replication_factor)
     assert (np.array(assembly_paths) == np.array(repeated_stimulus_paths)).all()
-
     repeated_stimulus_ids = np.repeat(stimulus_set['stimulus_id'].values, replication_factor)
-    assembly['stimulus_path'] = repeated_stimulus_ids
-    assembly = assembly.rename({'stimulus_path': 'stimulus_id'})
 
+    # repeat over the presentation dimension to accommodate multiple runs per stimulus
+    repeated_assembly = xr.concat([assembly for _ in range(replication_factor)], dim='presentation')
+    repeated_assembly = repeated_assembly.reset_index('presentation')
+    repeated_assembly.assign_coords(stimulus_path=('presentation', repeated_stimulus_ids))
+    repeated_assembly = repeated_assembly.rename({'stimulus_path': 'stimulus_id'})
+
+    # hack to capture columns
+    all_columns = []
     for column in stimulus_set.columns:
-        assembly[column] = 'stimulus_id', np.repeat(stimulus_set[column].values, replication_factor)
+        repeated_values = np.repeat(stimulus_set[column].values, replication_factor)
+        repeated_assembly = repeated_assembly.assign_coords({column: ('presentation', repeated_values)})
+        all_columns.append(column)
+    if 'stimulus_id' in all_columns:
+        all_columns.remove('stimulus_id')
+    if 'stimulus_path2' in all_columns:
+        all_columns.remove('stimulus_path2')
 
-    # Handle shifts
-    repeated_shifts = np.tile(np.array(model_requirements['microsaccades']), (len(stimulus_set['stimulus_id']), 1))
-    assembly.coords['shift_x'] = ('stimulus_id', repeated_shifts[:, 0])
-    assembly.coords['shift_y'] = ('stimulus_id', repeated_shifts[:, 1])
-
-    # Preserve existing coordinates and dimensions
-    for coord in assembly.coords:
-        assembly[coord] = ('stimulus_id', np.repeat(assembly[coord].data, replication_factor))
+    repeated_assembly.coords['shift_x'] = ('presentation', [shift[0] for shift in model_requirements['microsaccades']])
+    repeated_assembly.coords['shift_y'] = ('presentation', [shift[1] for shift in model_requirements['microsaccades']])
 
     # Set MultiIndex
-    assembly = assembly.set_index(presentation=['stimulus_id'] + list(assembly.coords))
+    index = ['stimulus_id', 'stimulus_path2'] + all_columns + ['shift_x', 'shift_y']
+    repeated_assembly = repeated_assembly.set_index(presentation=index)
 
-    return assembly
+    return repeated_assembly
 
 
 class HookHandle:
