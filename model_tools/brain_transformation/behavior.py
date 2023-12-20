@@ -7,6 +7,7 @@ import sklearn.linear_model
 import sklearn.multioutput
 from typing import Union, List
 from brainio.assemblies import walk_coords, array_is_element, BehavioralAssembly, DataAssembly
+from brainio.stimuli import StimulusSet
 from model_tools.utils import make_list
 from brainscore.model_interface import BrainModel
 
@@ -257,19 +258,26 @@ class OddOneOut(BrainModel):
             unique_triplets = unique_triplets.append(triplets.loc[triplets["stimulus_id"] == id].iloc[0])
         return pd.DataFrame(unique_triplets, columns=cols)
     
+
     def calculate_similarity_matrix(self, features):
+        features = features.transpose('presentation', 'neuroid')
         if self.similarity_measure == 'dot':
             similarity_matrix = np.dot(features, np.transpose(features))
-            return similarity_matrix
-        
         elif self.similarity_measure == 'cosine':
             row_norms = np.linalg.norm(features, axis=1).reshape(-1, 1)
             norm_product = np.dot(row_norms, row_norms.T)
             dot_product = np.dot(features, np.transpose(features))
-            cosine_similarity = dot_product / norm_product
-            return cosine_similarity
+            similarity_matrix = dot_product / norm_product
         else:
             raise ValueError(f"Unknown similarity_measure {self.similarity_measure} -- expected one of 'dot' or 'cosine'")
+        
+        similarity_matrix = DataAssembly(similarity_matrix, coords={
+            (f"{coord}_left": ('presentation_left', values)) for coord, _, values in walk_coords(features['presentation']),
+            (f"{coord}_right": ('presentation_right', values)) for coord, _, values in walk_coords(features['presentation']) 
+            }, dims=['presentation_left', 'presentation_right'])
+
+        return similarity_matrix
+        
 
     def calculate_choices(self, similarity_matrix, triplets):
         choice_predictions = []
@@ -278,6 +286,15 @@ class OddOneOut(BrainModel):
             sims = similarity_matrix[[i, i, j], [j, k, k]]
             idx = triplet[2 - np.argmax(sims)]
             choice_predictions.append(idx)
-        return choice_predictions
-
+        
+        stimulus_ids = triplets['stimulus_id']
+        choices = BehavioralAssembly(choice_predictions, coords={
+            'triplet_index': ('presentation', [i for i in range(0, len(stimulus_ids), 3)]),
+            'triplet_stimulus_id0': ('presentation', [{stimulus_ids[i]} for i in range(0, len(stimulus_ids), 3)]),
+            'triplet_stimulus_id1': ('presentation', [{stimulus_ids[i+1]} for i in range(0, len(stimulus_ids), 3)]),
+            'triplet_stimulus_id2': ('presentation', [{stimulus_ids[i+2]} for i in range(0, len(stimulus_ids), 3)]),
+            'stimulus_id': ('presentation', [f"{stimulus_ids[i]}__{stimulus_ids[i+1]}__{stimulus_ids[i+2]}" for i in range(0, len(stimulus_ids), 3)])
+            }, dims=['presentation'])
+        
+        return choices
 
