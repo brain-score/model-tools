@@ -248,7 +248,7 @@ class OddOneOut(BrainModel):
         choices = self.calculate_choices(similarity_matrix, triplets)
         return choices
     
-    def unique_stimuli(self, triplets):
+    def unique_stimuli(self, triplets: StimulusSet) -> StimulusSet:
         """Returns a dataframe with unique stimuli."""
         cols = triplets.columns
         unique_ids = np.unique(triplets["stimulus_id"])
