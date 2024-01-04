@@ -6,12 +6,16 @@ import xarray as xr
 from pathlib import Path
 from pytest import approx
 
+import brainscore
 from brainio.assemblies import BehavioralAssembly
 from brainio.stimuli import StimulusSet
 from brainscore.benchmarks.rajalingham2018 import _DicarloRajalingham2018
 from brainscore.benchmarks.screen import place_on_screen
 from brainscore.metrics.image_level_behavior import I2n
 from brainscore.model_interface import BrainModel
+#import sys
+#file_path = "/Users/linussommer/Documents/GitHub/model-tools"
+#sys.path.append(file_path)
 from model_tools.activations import PytorchWrapper
 from model_tools.brain_transformation import ModelCommitment, ProbabilitiesMapping
 
@@ -176,3 +180,28 @@ class TestI2N:
         score = benchmark(transformation)
         score = score.sel(aggregation='center')
         assert score == approx(expected_score, abs=0.005), f"expected {expected_score}, but got {score}"
+
+
+class TestOddOneOut:
+    def test_odd_one_out(self):
+        activations_model = pytorch_custom()
+        brain_model = ModelCommitment(identifier=activations_model.identifier, activations_model=activations_model,
+                                      layers=[None], behavioral_readout_layer='relu2')
+                
+        assy = brainscore.get_assembly(f'Hebart2023')
+        triplets = place_on_screen(stimulus_set=assy.stimulus_set[:21], 
+                                  target_visual_degrees=brain_model.visual_degrees(),
+                                  source_visual_degrees=8) 
+
+        brain_model.start_task(BrainModel.Task.odd_one_out)
+        choices = brain_model.look_at(triplets)
+        print(choices)
+
+        assert len(choices) == len(triplets)
+        assert isinstance(choices[0], np.int64)
+        #assert 0.34 < np.sum(correct_choices)/len(choices) < 0.36
+
+test = TestOddOneOut()
+test.test_odd_one_out()
+        
+
